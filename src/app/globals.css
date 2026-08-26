@@ -43,3 +43,21 @@
     @apply bg-primary hover:bg-primary/90 text-primary-foreground transition-all rounded-lg px-4 py-2 font-medium flex items-center justify-center gap-2 shadow-lg shadow-primary/25;
   }
 }
+
+@keyframes orb-drift-a {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(40px, 30px) scale(1.15); }
+}
+
+@keyframes orb-drift-b {
+  0%, 100% { transform: translate(0, 0) scale(1.05); }
+  50% { transform: translate(-35px, -25px) scale(0.95); }
+}
+
+.animate-orb-a {
+  animation: orb-drift-a 14s ease-in-out infinite;
+}
+
+.animate-orb-b {
+  animation: orb-drift-b 18s ease-in-out infinite;
+}

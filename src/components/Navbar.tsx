@@ -69,7 +69,7 @@ export default async function Navbar() {
               <Link href="/login" className="glass-button text-sm">
                 Log in
               </Link>
-              <Link href="/login" className="primary-button text-sm hidden sm:flex">
+              <Link href="/signup" className="primary-button text-sm hidden sm:flex">
                 Sign up
               </Link>
             </>
