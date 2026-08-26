@@ -39,6 +39,9 @@ export default async function Navbar() {
           <Link href="/communities" className="glass-button p-2 sm:hidden rounded-full" title="Communities">
             <Hash className="w-5 h-5" />
           </Link>
+          <Link href="/communities" className="glass-button p-2 sm:hidden rounded-full" title="Communities">
+            <Hash className="w-5 h-5" />
+          </Link>
           {user ? (
             <>
               <Link href="/create" className="primary-button text-sm py-1.5 hidden sm:flex">
