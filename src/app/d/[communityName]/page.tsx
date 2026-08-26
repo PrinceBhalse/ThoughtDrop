@@ -3,10 +3,12 @@ import IdeaCard from '@/components/IdeaCard'
 import Link from 'next/link'
 import { Plus, Users } from 'lucide-react'
 import { notFound } from 'next/navigation'
+import { calculateAge } from '@/lib/utils'
 
 export const dynamic = 'force-dynamic';
 
-export default async function CommunityPage({ params }: { params: { communityName: string } }) {
+export default async function CommunityPage({ params }: { params: Promise<{ communityName: string }> }) {
+  const { communityName } = await params
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
@@ -14,7 +16,7 @@ export default async function CommunityPage({ params }: { params: { communityNam
   const { data: community } = await supabase
     .from('communities')
     .select('*')
-    .eq('name', params.communityName)
+    .eq('name', communityName)
     .single()
 
   if (!community) {
@@ -42,10 +44,7 @@ export default async function CommunityPage({ params }: { params: { communityNam
       .single()
     
     if (profile?.date_of_birth) {
-      const dob = new Date(profile.date_of_birth)
-      const diff_ms = Date.now() - dob.getTime()
-      const age_dt = new Date(diff_ms)
-      userAge = Math.abs(age_dt.getUTCFullYear() - 1970)
+      userAge = calculateAge(profile.date_of_birth)
     }
   }
 

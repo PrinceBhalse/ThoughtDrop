@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { createClient } from '@/utils/supabase/server';
-import { Search, Plus, User, LogOut } from 'lucide-react';
+import { Search, Plus, User, LogOut, Hash } from 'lucide-react';
 
 export default async function Navbar() {
   const supabase = await createClient();
@@ -32,6 +32,13 @@ export default async function Navbar() {
 
         {/* Actions */}
         <div className="flex items-center gap-3">
+          <Link href="/communities" className="glass-button text-sm hidden sm:flex items-center gap-1.5">
+            <Hash className="w-4 h-4" />
+            Communities
+          </Link>
+          <Link href="/communities" className="glass-button p-2 sm:hidden rounded-full" title="Communities">
+            <Hash className="w-5 h-5" />
+          </Link>
           {user ? (
             <>
               <Link href="/create" className="primary-button text-sm py-1.5 hidden sm:flex">

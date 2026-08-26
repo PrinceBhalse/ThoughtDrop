@@ -61,7 +61,7 @@ export default async function ProfilePage() {
       {/* Ideas List */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {ideas && ideas.length > 0 ? (
-          ideas.map((idea: any) => (
+          ideas.map((idea) => (
             <IdeaCard 
               key={idea.id} 
               idea={idea as Idea} 
@@ -71,7 +71,7 @@ export default async function ProfilePage() {
           ))
         ) : (
           <div className="col-span-2 text-center p-12 glass-panel">
-            <p className="text-muted-foreground">You haven't shared any ideas yet.</p>
+            <p className="text-muted-foreground">You haven&apos;t shared any ideas yet.</p>
           </div>
         )}
       </div>

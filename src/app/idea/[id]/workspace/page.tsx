@@ -1,12 +1,14 @@
 import { createClient } from '@/utils/supabase/server'
 import { notFound, redirect } from 'next/navigation'
 import WorkspaceChat from '@/components/WorkspaceChat'
+import WorkspacePresence from '@/components/WorkspacePresence'
 import Link from 'next/link'
 import { ArrowLeft, Users } from 'lucide-react'
 
 export const dynamic = 'force-dynamic';
 
-export default async function WorkspacePage({ params }: { params: { id: string } }) {
+export default async function WorkspacePage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
@@ -17,12 +19,19 @@ export default async function WorkspacePage({ params }: { params: { id: string }
   const { data: idea } = await supabase
     .from('ideas')
     .select('*, profiles:users(username)')
-    .eq('id', params.id)
+    .eq('id', id)
     .single()
 
   if (!idea) {
     notFound()
   }
+
+  // Get current user's profile for presence tracking
+  const { data: profile } = await supabase
+    .from('users')
+    .select('username')
+    .eq('id', user.id)
+    .single()
 
   // Workspaces are only available for "In Progress" ideas (or whatever logic you prefer)
   if (idea.status !== 'In Progress') {
@@ -30,7 +39,7 @@ export default async function WorkspacePage({ params }: { params: { id: string }
       <div className="max-w-4xl mx-auto text-center py-20">
         <h1 className="text-3xl font-bold mb-4">Workspace Not Available</h1>
         <p className="text-muted-foreground mb-8">
-          Workspaces are only active when an idea is in the "In Progress" status.
+          Workspaces are only active when an idea has the &quot;In Progress&quot; status.
         </p>
         <Link href={`/idea/${idea.id}`} className="primary-button">
           Go back to Idea
@@ -61,6 +70,12 @@ export default async function WorkspacePage({ params }: { params: { id: string }
 
         {/* Sidebar / Team Section */}
         <div className="lg:w-80 space-y-6 overflow-y-auto">
+          <WorkspacePresence
+            ideaId={idea.id}
+            currentUserId={user.id}
+            currentUsername={profile?.username || 'anonymous'}
+          />
+
           <div className="glass-panel p-6">
             <h3 className="font-bold mb-4 flex items-center gap-2">
               <Users className="w-5 h-5 text-primary" />

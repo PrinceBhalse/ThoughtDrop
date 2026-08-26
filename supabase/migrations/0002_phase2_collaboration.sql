@@ -14,7 +14,7 @@ CREATE POLICY "Communities are viewable by everyone." ON public.communities
   FOR SELECT USING (true);
 
 CREATE POLICY "Authenticated users can insert communities." ON public.communities
-  FOR INSERT WITH CHECK (auth.role() = 'authenticated');
+  FOR INSERT WITH CHECK (auth.role() = 'authenticated' AND auth.uid() = created_by);
 
 -- Modify ideas table
 ALTER TABLE public.ideas 
@@ -33,11 +33,14 @@ CREATE TABLE public.workspace_messages (
 -- Enable RLS for workspace_messages
 ALTER TABLE public.workspace_messages ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Workspace messages are viewable by everyone." ON public.workspace_messages
-  FOR SELECT USING (true);
+CREATE POLICY "Workspace messages are viewable by logged-in users." ON public.workspace_messages
+  FOR SELECT USING (auth.role() = 'authenticated');
 
 CREATE POLICY "Authenticated users can insert workspace messages." ON public.workspace_messages
   FOR INSERT WITH CHECK (auth.role() = 'authenticated' AND auth.uid() = user_id);
+
+-- Index for fast chat history lookups
+CREATE INDEX idx_workspace_messages_idea_id ON public.workspace_messages(idea_id);
 
 -- Enable Realtime for workspace_messages
 -- (Note: This is often done via Supabase Dashboard UI or specific SQL commands if supported)

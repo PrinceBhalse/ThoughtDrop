@@ -2,8 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { createClient } from "@/utils/supabase/client";
-import { Send, User } from "lucide-react";
-import { format } from "date-fns";
+import { Send } from "lucide-react";
 
 interface Message {
   id: string;
@@ -34,9 +33,9 @@ export default function WorkspaceChat({ ideaId, currentUserId }: WorkspaceChatPr
         .select('*, users(username)')
         .eq('idea_id', ideaId)
         .order('created_at', { ascending: true });
-      
+
       if (data) {
-        setMessages(data as any);
+        setMessages(data as Message[]);
       }
     };
 
@@ -116,7 +115,7 @@ export default function WorkspaceChat({ ideaId, currentUserId }: WorkspaceChatPr
                     {isMe ? 'You' : `@${msg.users?.username}`}
                   </span>
                   <span className="text-[10px] text-muted-foreground/50">
-                    {format(new Date(msg.created_at), 'HH:mm')}
+                    {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                   </span>
                 </div>
                 <div className={`px-4 py-2 rounded-2xl text-sm ${isMe ? 'bg-primary text-white rounded-tr-sm' : 'bg-white/10 rounded-tl-sm'}`}>

@@ -1,17 +1,32 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { createIdea } from "./actions";
 import RichTextEditor from "@/components/RichTextEditor";
-import { Bot, GitFork, ShieldAlert } from "lucide-react";
+import { createClient } from "@/utils/supabase/client";
+import { Bot, GitFork, ShieldAlert, Hash } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 
 export default function CreateIdeaPage() {
   const searchParams = useSearchParams();
   const parentId = searchParams.get('parentId') || '';
-  
+  const presetCommunityId = searchParams.get('communityId') || '';
+
   const [contentHtml, setContentHtml] = useState("");
   const [contentText, setContentText] = useState("");
+  const [communities, setCommunities] = useState<{ id: string; name: string }[]>([]);
+
+  useEffect(() => {
+    const loadCommunities = async () => {
+      const supabase = createClient();
+      const { data } = await supabase
+        .from('communities')
+        .select('id, name')
+        .order('name', { ascending: true });
+      if (data) setCommunities(data);
+    };
+    loadCommunities();
+  }, []);
 
   return (
     <div className="max-w-5xl mx-auto flex flex-col lg:flex-row gap-8">
@@ -89,14 +104,21 @@ export default function CreateIdeaPage() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-white/10">
               <div>
-                <label className="block text-sm font-medium mb-2 text-muted-foreground" htmlFor="communityId">Sub-Drop (Community ID - optional)</label>
-                <input 
-                  type="text" 
-                  id="communityId" 
-                  name="communityId" 
-                  className="w-full bg-secondary border border-white/10 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-primary transition-all"
-                  placeholder="Paste UUID of community"
-                />
+                <label className="block text-sm font-medium mb-2 text-muted-foreground" htmlFor="communityId">Sub-Drop (Community - optional)</label>
+                <div className="relative">
+                  <Hash className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+                  <select
+                    id="communityId"
+                    name="communityId"
+                    defaultValue={presetCommunityId}
+                    className="w-full bg-secondary border border-white/10 rounded-lg pl-11 pr-4 py-3 focus:outline-none focus:ring-2 focus:ring-primary transition-all appearance-none"
+                  >
+                    <option value="">None — post globally</option>
+                    {communities.map((c) => (
+                      <option key={c.id} value={c.id}>/d/{c.name}</option>
+                    ))}
+                  </select>
+                </div>
               </div>
               <div>
                 <label className="block text-sm font-medium mb-2 text-muted-foreground" htmlFor="requiredRoles">Required Roles (comma-separated)</label>

@@ -1,11 +1,12 @@
 import { createClient } from '@/utils/supabase/server'
 import { notFound } from 'next/navigation'
-import { ArrowUp, Lock, GitFork, User, Calendar, MessageSquare, ExternalLink } from 'lucide-react'
+import { ArrowUp, Lock, GitFork, User, Calendar, MessageSquare, Hash, Users } from 'lucide-react'
 import Link from 'next/link'
 
 export const dynamic = 'force-dynamic';
 
-export default async function IdeaDetailPage({ params }: { params: { id: string } }) {
+export default async function IdeaDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
@@ -16,7 +17,7 @@ export default async function IdeaDetailPage({ params }: { params: { id: string 
       profiles:users(username),
       communities(name)
     `)
-    .eq('id', params.id)
+    .eq('id', id)
     .single()
 
   if (!idea) {
@@ -68,6 +69,11 @@ export default async function IdeaDetailPage({ params }: { params: { id: string 
               <GitFork className="w-3 h-3" /> Forked from parent
             </Link>
           )}
+          {idea.communities?.name && (
+            <Link href={`/d/${idea.communities.name}`} className="text-xs font-medium px-3 py-1.5 rounded-full bg-blue-500/20 text-blue-400 border border-blue-500/20 flex items-center gap-1 hover:bg-blue-500/30 transition-colors">
+              <Hash className="w-3 h-3" /> /d/{idea.communities.name}
+            </Link>
+          )}
         </div>
 
         <h1 className="text-4xl md:text-5xl font-bold tracking-tight mb-6">
@@ -103,6 +109,34 @@ export default async function IdeaDetailPage({ params }: { params: { id: string 
         </div>
       </div>
 
+      {/* Collaboration Section */}
+      {(idea.status === 'In Progress' || (idea.required_roles && idea.required_roles.length > 0)) && (
+        <div className="glass-panel p-6 flex flex-col sm:flex-row sm:items-center gap-4 justify-between">
+          <div className="flex flex-col gap-2">
+            {idea.required_roles && idea.required_roles.length > 0 && (
+              <>
+                <h3 className="font-bold flex items-center gap-2 text-sm">
+                  <Users className="w-4 h-4 text-primary" /> Wanted Roles
+                </h3>
+                <div className="flex flex-wrap gap-2">
+                  {idea.required_roles.map((role: string, i: number) => (
+                    <span key={i} className="text-xs font-medium px-2.5 py-1 rounded-full bg-purple-500/20 text-purple-400 border border-purple-500/20">
+                      Need {role}
+                    </span>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+          {idea.status === 'In Progress' && user && (
+            <Link href={`/idea/${idea.id}/workspace`} className="primary-button shrink-0 flex items-center gap-2">
+              <MessageSquare className="w-4 h-4" />
+              Join Workspace
+            </Link>
+          )}
+        </div>
+      )}
+
       {/* Content Section */}
       <div className="glass-panel p-8 relative">
         {idea.is_nda_protected && !hasSignedNda ? (
@@ -137,15 +171,30 @@ export default async function IdeaDetailPage({ params }: { params: { id: string 
         )}
       </div>
 
-      {/* Discussion Section (Placeholder for Phase 2) */}
+      {/* Discussion Section */}
       <div className="glass-panel p-8">
         <h3 className="text-2xl font-bold mb-6 flex items-center gap-2">
           <MessageSquare className="w-6 h-6 text-primary" />
           Discussion
         </h3>
-        <div className="text-center py-12 border border-white/5 border-dashed rounded-xl bg-white/5">
-          <p className="text-muted-foreground">Comments and live workspaces are unlocking in Phase 2.</p>
-        </div>
+        {idea.status === 'In Progress' ? (
+          <div className="flex flex-col items-center py-12 border border-white/5 border-dashed rounded-xl bg-white/5">
+            <p className="text-muted-foreground mb-6">
+              This idea is In Progress — the live workspace chat is open.
+            </p>
+            {user ? (
+              <Link href={`/idea/${idea.id}/workspace`} className="primary-button flex items-center gap-2">
+                <Users className="w-4 h-4" /> Enter Live Workspace
+              </Link>
+            ) : (
+              <Link href="/login" className="primary-button">Log in to Join</Link>
+            )}
+          </div>
+        ) : (
+          <div className="text-center py-12 border border-white/5 border-dashed rounded-xl bg-white/5">
+            <p className="text-muted-foreground">Threaded comments are coming soon.</p>
+          </div>
+        )}
       </div>
     </div>
   )
