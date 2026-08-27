@@ -22,11 +22,6 @@ export default function IdeaFeed({
 
   const lastCreatedAt = ideas.length > 0 ? ideas[ideas.length - 1].created_at : null;
 
-  useEffect(() => {
-    setIdeas(initialIdeas);
-    setDone(false);
-  }, [initialIdeas]);
-
   const loadMore = async () => {
     if (loading || done || !lastCreatedAt) return;
     setLoading(true);

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Share2, Check } from "lucide-react";
+import { useToast } from "@/components/ui/Toast";
 
 interface ShareButtonProps {
   title: string;
@@ -9,6 +10,7 @@ interface ShareButtonProps {
 }
 
 export default function ShareButton({ title, url }: ShareButtonProps) {
+  const { toast } = useToast();
   const [copied, setCopied] = useState(false);
 
   const handleShare = async () => {
@@ -17,16 +19,19 @@ export default function ShareButton({ title, url }: ShareButtonProps) {
         await navigator.share({ title, url });
         return;
       } catch {
-        // User cancelled or share unavailable — fall through to copy.
+        // User cancelled — fall through to clipboard.
       }
     }
-    // Fallback: copy link to clipboard.
+    // Desktop fallback: append UTM param before copying.
     try {
-      await navigator.clipboard.writeText(url);
+      const separator = url.includes("?") ? "&" : "?";
+      const tracked = `${url}${separator}ref=share_link`;
+      await navigator.clipboard.writeText(tracked);
       setCopied(true);
+      toast("Link copied to clipboard", "success");
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      window.prompt("Copy this link to share:", url);
+      toast("Copy failed — select the address bar manually", "error");
     }
   };
 

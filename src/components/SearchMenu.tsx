@@ -38,13 +38,15 @@ export default function SearchMenu() {
   // Debounced search.
   useEffect(() => {
     if (!query.trim()) {
-      setIdeas([]);
-      setCommunities([]);
-      setLoading(false);
-      return;
+      const id = setTimeout(() => {
+        setIdeas([]);
+        setCommunities([]);
+        setLoading(false);
+      }, 0);
+      return () => clearTimeout(id);
     }
-    setLoading(true);
     const handle = setTimeout(async () => {
+      setLoading(true);
       try {
         const res = await fetch(`/api/search?q=${encodeURIComponent(query)}&limit=6`);
         const data = await res.json();
