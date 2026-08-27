@@ -2,6 +2,7 @@ import { createClient } from '@/utils/supabase/server'
 import Link from 'next/link'
 import { Hash, Users, Plus } from 'lucide-react'
 import CreateCommunityForm from '@/components/CreateCommunityForm'
+import EmptyState from '@/components/EmptyState'
 
 export const dynamic = 'force-dynamic';
 
@@ -58,16 +59,21 @@ export default async function CommunitiesPage() {
               })}
             </div>
           ) : (
-            <div className="glass-panel p-12 text-center flex flex-col items-center justify-center">
-              <h2 className="text-2xl font-bold mb-2">No communities yet</h2>
-              <p className="text-muted-foreground mb-6">Be the first to carve out a space for your domain.</p>
-            </div>
+            <EmptyState
+              icon={Hash}
+              title="No Sub-Drops yet"
+              line="Communities are user-created. Found a domain that deserves its own name? Carve out the first one and set the tone."
+              code="mkdir /d/yourdomain"
+              ctaLabel="Create the first community"
+              ctaHref="#create"
+              hint="Names are lowercase with no spaces, like /d/SustainableArchitecture."
+            />
           )}
         </div>
 
         {/* Create Sidebar */}
         <div className="lg:w-80 w-full space-y-6">
-          <div className="glass-panel p-6 border-primary/30 shadow-[0_0_20px_rgba(139,92,246,0.1)]">
+          <div className="glass-panel p-6" id="create">
             <h3 className="font-bold text-lg mb-2">Start a Sub-Drop</h3>
             <p className="text-sm text-muted-foreground mb-6">
               Any member can create a community. Names are lowercase with no spaces.

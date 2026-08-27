@@ -1,11 +1,54 @@
 import { createClient } from '@/utils/supabase/server'
 import { notFound } from 'next/navigation'
+import type { Metadata } from 'next'
 import { ArrowUp, Lock, GitFork, User, Calendar, MessageSquare, Hash, Users } from 'lucide-react'
 import Link from 'next/link'
+import ShareButton from '@/components/ShareButton'
+import ReportButton from '@/components/ReportButton'
+import { isAdminEmail } from '@/lib/admin'
 
 export const dynamic = 'force-dynamic';
 
-export default async function IdeaDetailPage({ params }: { params: Promise<{ id: string }> }) {
+interface IdeaPageProps {
+  params: Promise<{ id: string }>
+}
+
+export async function generateMetadata({ params }: IdeaPageProps): Promise<Metadata> {
+  const { id } = await params
+  const supabase = await createClient()
+  const { data: idea } = await supabase
+    .from('ideas')
+    .select('title, content, category, is_nda_protected, communities(name)')
+    .eq('id', id)
+    .single()
+
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'
+  const url = `${baseUrl}/idea/${id}`
+  const title = idea ? `${idea.title} — ThoughtDrop` : 'ThoughtDrop'
+  const description = idea
+    ? `${idea.content?.slice(0, 160) ?? `${idea.category} idea.`}${idea.is_nda_protected ? ' [NDA protected]' : ''}`
+    : 'Share and discover brilliant ideas.'
+
+  return {
+    title,
+    description,
+    alternates: { canonical: url },
+    openGraph: {
+      title,
+      description,
+      url,
+      type: 'article',
+      images: [{ url: `${baseUrl}/idea/${id}/opengraph-image` }],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title,
+      description,
+    },
+  }
+}
+
+export default async function IdeaDetailPage({ params }: IdeaPageProps) {
   const { id } = await params
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -21,6 +64,12 @@ export default async function IdeaDetailPage({ params }: { params: Promise<{ id:
     .single()
 
   if (!idea) {
+    notFound()
+  }
+
+  // Hide reported content from everyone except admins (who review it in /admin instead).
+  const isAdmin = isAdminEmail(user?.email)
+  if (idea.is_hidden === true && !isAdmin) {
     notFound()
   }
 
@@ -101,6 +150,10 @@ export default async function IdeaDetailPage({ params }: { params: Promise<{ id:
               <ArrowUp className="w-4 h-4" />
               {idea.upvotes_count}
             </button>
+            <ShareButton
+              title={idea.title}
+              url={`${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/idea/${idea.id}`}
+            />
             <Link href={`/create?parentId=${idea.id}`} className="primary-button">
               <GitFork className="w-4 h-4" />
               Fork Idea
@@ -195,6 +248,14 @@ export default async function IdeaDetailPage({ params }: { params: Promise<{ id:
             <p className="text-muted-foreground">Threaded comments are coming soon.</p>
           </div>
         )}
+      </div>
+
+      {/* Footer */}
+      <div className="flex items-center justify-between border-t border-border pt-4">
+        <p className="text-xs text-muted-foreground">
+          Keeping the feed healthy is on all of us.
+        </p>
+        {user && user.id !== idea.user_id && <ReportButton ideaId={idea.id} />}
       </div>
     </div>
   )

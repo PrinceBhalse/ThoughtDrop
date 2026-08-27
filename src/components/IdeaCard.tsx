@@ -39,12 +39,16 @@ export default function IdeaCard({ idea, userAge, isAuthenticated, hasSignedNda 
 
   const contentSnippet = idea.content.length > 150 ? idea.content.substring(0, 150) + '...' : idea.content;
 
+  const canInteract = !isAdultRestricted && !isNdaRestricted;
+
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
+      initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
-      whileHover={(!isAdultRestricted && !isNdaRestricted) ? { y: -4, scale: 1.01 } : {}}
-      className="glass-panel p-6 relative overflow-hidden group transition-all flex flex-col"
+      transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+      whileHover={canInteract ? { y: -6 } : {}}
+      whileTap={canInteract ? { y: -2 } : {}}
+      className="glass-panel p-6 relative overflow-hidden group transition-colors flex flex-col"
     >
       {/* Category Gradient Top Bar */}
       <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-primary to-accent opacity-50 group-hover:opacity-100 transition-opacity" />

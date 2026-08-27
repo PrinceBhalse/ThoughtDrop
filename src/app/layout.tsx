@@ -6,8 +6,26 @@ import Navbar from "@/components/Navbar";
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
 
 export const metadata: Metadata = {
-  title: "ThoughtDrop",
+  title: {
+    default: "ThoughtDrop",
+    template: "%s",
+  },
   description: "Share and discover brilliant ideas.",
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"),
+  openGraph: {
+    title: "ThoughtDrop",
+    description: "Share and discover brilliant ideas.",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "ThoughtDrop",
+    description: "Share and discover brilliant ideas.",
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
 };
 
 export default function RootLayout({

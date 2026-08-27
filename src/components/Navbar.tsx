@@ -1,10 +1,12 @@
 import Link from 'next/link';
 import { createClient } from '@/utils/supabase/server';
-import { Search, Plus, User, LogOut, Hash } from 'lucide-react';
+import { Search, Plus, User, LogOut, Hash, ShieldCheck } from 'lucide-react';
+import { isAdminEmail } from '@/lib/admin';
 
 export default async function Navbar() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
+  const isAdmin = isAdminEmail(user?.email);
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 glass-panel border-x-0 border-t-0 rounded-none bg-secondary/70">
@@ -39,9 +41,12 @@ export default async function Navbar() {
           <Link href="/communities" className="glass-button p-2 sm:hidden rounded-full" title="Communities">
             <Hash className="w-5 h-5" />
           </Link>
-          <Link href="/communities" className="glass-button p-2 sm:hidden rounded-full" title="Communities">
-            <Hash className="w-5 h-5" />
-          </Link>
+          {isAdmin && (
+            <Link href="/admin" className="glass-button text-sm hidden sm:flex items-center gap-1.5 text-primary-foreground/80">
+              <ShieldCheck className="w-4 h-4" />
+              Admin
+            </Link>
+          )}
           {user ? (
             <>
               <Link href="/create" className="primary-button text-sm py-1.5 hidden sm:flex">

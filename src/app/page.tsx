@@ -1,6 +1,8 @@
 import { createClient } from '@/utils/supabase/server'
 import IdeaCard, { type Idea } from '@/components/IdeaCard'
+import EmptyState from '@/components/EmptyState'
 import { calculateAge } from '@/lib/utils'
+import { Coins } from 'lucide-react'
 
 // Force dynamic to always fetch fresh data
 export const dynamic = 'force-dynamic';
@@ -26,7 +28,7 @@ export default async function Home() {
   }
 
   // 3. Fetch Ideas (Join with users to get username if not anonymous)
-  const { data: ideas, error } = await supabase
+  const { data: ideasRaw, error } = await supabase
     .from('ideas')
     .select(`
       *,
@@ -34,6 +36,10 @@ export default async function Home() {
       communities(name)
     `)
     .order('created_at', { ascending: false })
+
+  // Filter out reported/hidden ideas. is_hidden is undefined until migration 0003 runs,
+  // so treat only an explicit `true` as hidden — safe across both states.
+  const ideas = ideasRaw?.filter((idea) => idea.is_hidden !== true) ?? []
 
   return (
     <div className="flex flex-col gap-8">
@@ -92,10 +98,15 @@ export default async function Home() {
           ))}
         </div>
       ) : (
-        <div className="text-center p-24 glass-panel flex flex-col items-center justify-center">
-          <h3 className="text-2xl font-bold mb-2">No ideas yet</h3>
-          <p className="text-muted-foreground mb-6">Be the first to drop a thought!</p>
-        </div>
+        <EmptyState
+          icon={Coins}
+          title="This feed is empty"
+          line="No thoughts have been dropped yet. Every platform starts with one brave creator — why not you?"
+          code="[] # No seeds found in ideas.pool"
+          ctaLabel="Drop the first idea"
+          ctaHref="/create"
+          hint="The first few entries here will rumble loudly. Make yours count."
+        />
       )}
     </div>
   )

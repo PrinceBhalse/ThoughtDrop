@@ -1,7 +1,8 @@
 import { createClient } from '@/utils/supabase/server'
 import IdeaCard from '@/components/IdeaCard'
+import EmptyState from '@/components/EmptyState'
 import Link from 'next/link'
-import { Plus, Users } from 'lucide-react'
+import { Plus, Users, Lightbulb } from 'lucide-react'
 import { notFound } from 'next/navigation'
 import { calculateAge } from '@/lib/utils'
 
@@ -24,7 +25,7 @@ export default async function CommunityPage({ params }: { params: Promise<{ comm
   }
 
   // Fetch ideas for this community
-  const { data: ideas } = await supabase
+  const { data: ideasRaw } = await supabase
     .from('ideas')
     .select(`
       *,
@@ -33,6 +34,8 @@ export default async function CommunityPage({ params }: { params: Promise<{ comm
     `)
     .eq('community_id', community.id)
     .order('created_at', { ascending: false })
+
+  const ideas = ideasRaw?.filter((idea) => idea.is_hidden !== true) ?? []
 
   // Fetch user age for adult content filter
   let userAge = null;
@@ -67,13 +70,15 @@ export default async function CommunityPage({ params }: { params: Promise<{ comm
 
         <div className="grid grid-cols-1 gap-6">
           {ideas?.length === 0 ? (
-            <div className="glass-panel p-12 text-center flex flex-col items-center justify-center">
-              <h2 className="text-2xl font-bold mb-2">No ideas yet</h2>
-              <p className="text-muted-foreground mb-6">Be the first to drop a thought in {community.name}!</p>
-              <Link href={`/create?communityId=${community.id}`} className="primary-button">
-                Create Idea
-              </Link>
-            </div>
+            <EmptyState
+              icon={Lightbulb}
+              title={`/d/${community.name} is a clean slate`}
+              line={`Nothing lives here yet. Every memorable community starts with its first idea — be the seed that starts this ripple.`}
+              code={`SELECT * FROM ideas WHERE community_id = '${community.id.slice(0, 8)}...' -- 0 rows`}
+              ctaLabel="Create Idea"
+              ctaHref={`/create?communityId=${community.id}`}
+              hint="Your first post will reach everyone who wanders into this Sub-Drop."
+            />
           ) : (
             ideas?.map((idea) => (
               <IdeaCard 
