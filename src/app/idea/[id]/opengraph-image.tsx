@@ -55,22 +55,34 @@ export default async function IdeaOgImage({
           }}
         >
           <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
-            <div
-              style={{
-                width: "44px",
-                height: "44px",
-                borderRadius: "10px",
-                background: "#4f6ef7",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontSize: "26px",
-                fontWeight: 800,
-                color: "#ffffff",
-              }}
+            <svg
+              width="44"
+              height="44"
+              viewBox="0 0 64 64"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
             >
-              T
-            </div>
+              <path
+                d="M32 6C21.5 6 13 14.5 13 25c0 7 4 13 10 16v7c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2v-7c6-3 10-9 10-16 0-10.5-8.5-19-19-19z"
+                stroke="white"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+              <path
+                d="M26 28c0-4 3-7 6-7s6 3 6 7"
+                stroke="white"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+              />
+              <path
+                d="M26 48c0 3.3 2.7 6 6 6s6-2.7 6-6c0-4-3-7-6-10-3 3-6 6-6 10z"
+                stroke="white"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
             <span style={{ fontSize: "26px", fontWeight: 700, color: "#a6adbb" }}>
               ThoughtDrop
             </span>

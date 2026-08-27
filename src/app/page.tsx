@@ -1,5 +1,5 @@
 import { createClient } from '@/utils/supabase/server'
-import IdeaCard, { type Idea } from '@/components/IdeaCard'
+import IdeaFeed from '@/components/IdeaFeed'
 import EmptyState from '@/components/EmptyState'
 import { calculateAge } from '@/lib/utils'
 import { Coins } from 'lucide-react'
@@ -27,7 +27,7 @@ export default async function Home() {
     }
   }
 
-  // 3. Fetch Ideas (Join with users to get username if not anonymous)
+  // 3. Fetch first page of Ideas (Join with users to get username if not anonymous)
   const { data: ideasRaw, error } = await supabase
     .from('ideas')
     .select(`
@@ -36,6 +36,7 @@ export default async function Home() {
       communities(name)
     `)
     .order('created_at', { ascending: false })
+    .limit(15)
 
   // Filter out reported/hidden ideas. is_hidden is undefined until migration 0003 runs,
   // so treat only an explicit `true` as hidden — safe across both states.
@@ -87,16 +88,11 @@ export default async function Home() {
           Failed to load ideas. Please configure your database.
         </div>
       ) : ideas && ideas.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {ideas.map((idea: Idea) => (
-            <IdeaCard
-              key={idea.id}
-              idea={idea}
-              userAge={userAge}
-              isAuthenticated={!!user}
-            />
-          ))}
-        </div>
+        <IdeaFeed
+          initialIdeas={ideas}
+          userAge={userAge}
+          isAuthenticated={!!user}
+        />
       ) : (
         <EmptyState
           icon={Coins}

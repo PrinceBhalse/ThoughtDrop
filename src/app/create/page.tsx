@@ -1,20 +1,24 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { createIdea } from "./actions";
 import RichTextEditor from "@/components/RichTextEditor";
 import { createClient } from "@/utils/supabase/client";
+import { useToast } from "@/components/ui/Toast";
 import { Bot, GitFork, ShieldAlert, Hash } from "lucide-react";
-import { useSearchParams } from "next/navigation";
 
 export default function CreateIdeaPage() {
+  const router = useRouter();
   const searchParams = useSearchParams();
+  const { toast } = useToast();
   const parentId = searchParams.get('parentId') || '';
   const presetCommunityId = searchParams.get('communityId') || '';
 
   const [contentHtml, setContentHtml] = useState("");
   const [contentText, setContentText] = useState("");
   const [communities, setCommunities] = useState<{ id: string; name: string }[]>([]);
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     const loadCommunities = async () => {
@@ -39,7 +43,26 @@ export default function CreateIdeaPage() {
           <p className="text-muted-foreground">Drop your thought into the ecosystem.</p>
         </div>
 
-        <form action={createIdea} className="space-y-6">
+        <form
+          onSubmit={async (e) => {
+            e.preventDefault();
+            if (submitting) return;
+            setSubmitting(true);
+            const fd = new FormData(e.currentTarget);
+            fd.set("contentHtml", contentHtml);
+            fd.set("content", contentText);
+            fd.set("parentId", parentId);
+            const result = await createIdea(fd);
+            setSubmitting(false);
+            if (result === "ok") {
+              toast("Idea published", "success");
+              router.push("/");
+            } else {
+              toast(result.replace(/^error:/, "") || "Failed to publish idea", "error");
+            }
+          }}
+          className="space-y-6"
+        >
           <input type="hidden" name="contentHtml" value={contentHtml} />
           <input type="hidden" name="content" value={contentText} />
           <input type="hidden" name="parentId" value={parentId} />
@@ -152,8 +175,8 @@ export default function CreateIdeaPage() {
             </div>
 
             <div className="pt-4 flex justify-end">
-              <button type="submit" className="primary-button px-8 py-3 text-lg w-full sm:w-auto">
-                Publish
+              <button type="submit" disabled={submitting} className="primary-button px-8 py-3 text-lg w-full sm:w-auto disabled:opacity-60">
+                {submitting ? "Publishing…" : "Publish"}
               </button>
             </div>
           </div>

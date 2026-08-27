@@ -1,7 +1,9 @@
 import Link from 'next/link';
 import { createClient } from '@/utils/supabase/server';
-import { Search, Plus, User, LogOut, Hash, ShieldCheck } from 'lucide-react';
+import { Plus, User, LogOut, Hash, ShieldCheck } from 'lucide-react';
 import { isAdminEmail } from '@/lib/admin';
+import SearchMenu from './SearchMenu';
+import Logo from './Logo';
 
 export default async function Navbar() {
   const supabase = await createClient();
@@ -13,23 +15,11 @@ export default async function Navbar() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
         
         {/* Logo */}
-        <Link href="/" className="flex items-center gap-2 group">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-accent flex items-center justify-center text-white font-bold text-xl group-hover:scale-105 transition-transform">
-            T
-          </div>
-          <span className="font-bold text-xl hidden sm:block tracking-tight">ThoughtDrop</span>
-        </Link>
+        <Logo size={32} />
 
         {/* Search */}
         <div className="flex-1 max-w-md mx-4 hidden md:block">
-          <div className="relative group">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
-            <input 
-              type="text" 
-              placeholder="Search ideas, topics, or creators..." 
-              className="w-full bg-white/5 border border-white/10 rounded-full py-2 pl-10 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all placeholder:text-muted-foreground"
-            />
-          </div>
+          <SearchMenu />
         </div>
 
         {/* Actions */}

@@ -1,10 +1,11 @@
 import { createClient } from '@/utils/supabase/server'
 import { notFound } from 'next/navigation'
 import type { Metadata } from 'next'
-import { ArrowUp, Lock, GitFork, User, Calendar, MessageSquare, Hash, Users } from 'lucide-react'
+import { Lock, GitFork, User, Calendar, MessageSquare, Hash, Users } from 'lucide-react'
 import Link from 'next/link'
 import ShareButton from '@/components/ShareButton'
 import ReportButton from '@/components/ReportButton'
+import UpvoteButton from '@/components/UpvoteButton'
 import { isAdminEmail } from '@/lib/admin'
 
 export const dynamic = 'force-dynamic';
@@ -146,14 +147,16 @@ export default async function IdeaDetailPage({ params }: IdeaPageProps) {
           <div className="flex-1" />
           
           <div className="flex items-center gap-3">
-            <button className="glass-button">
-              <ArrowUp className="w-4 h-4" />
-              {idea.upvotes_count}
-            </button>
+            <UpvoteButton ideaId={idea.id} initialCount={idea.upvotes_count} />
             <ShareButton
               title={idea.title}
               url={`${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/idea/${idea.id}`}
             />
+            {user && idea.user_id === user.id && (
+              <Link href={`/idea/${idea.id}/edit`} className="glass-button">
+                Edit
+              </Link>
+            )}
             <Link href={`/create?parentId=${idea.id}`} className="primary-button">
               <GitFork className="w-4 h-4" />
               Fork Idea

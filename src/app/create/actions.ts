@@ -1,9 +1,8 @@
 'use server'
 
 import { createClient } from '@/utils/supabase/server'
-import { redirect } from 'next/navigation'
 
-export async function createIdea(formData: FormData) {
+export async function createIdea(formData: FormData): Promise<string> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
@@ -45,8 +44,8 @@ export async function createIdea(formData: FormData) {
 
   if (error) {
     console.error('Error creating idea:', error)
-    redirect('/create?error=true')
+    return `error:${error.message}`
   }
 
-  redirect('/')
+  return 'ok'
 }
