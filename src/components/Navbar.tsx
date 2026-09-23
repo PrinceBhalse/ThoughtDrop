@@ -4,6 +4,9 @@ import { Plus, User, LogOut, Hash, ShieldCheck } from 'lucide-react';
 import { isAdminEmail } from '@/lib/admin';
 import SearchMenu from './SearchMenu';
 import Logo from './Logo';
+import NotificationBell from './NotificationBell';
+import MobileMenu from './MobileMenu';
+import ThemeToggle from './ThemeToggle';
 
 export default async function Navbar() {
   const supabase = await createClient();
@@ -49,6 +52,10 @@ export default async function Navbar() {
               
               <div className="h-8 w-px bg-white/10 mx-1 hidden sm:block"></div>
               
+              <NotificationBell />
+              
+              <div className="h-8 w-px bg-white/10 mx-1 hidden sm:block"></div>
+              
               <Link href="/profile" className="glass-button p-2 rounded-full" title="Profile">
                 <User className="w-5 h-5" />
               </Link>
@@ -58,17 +65,21 @@ export default async function Navbar() {
                   <LogOut className="w-5 h-5" />
                 </button>
               </form>
+              
+              <MobileMenu user={user} isAdmin={isAdmin} />
             </>
           ) : (
             <>
-              <Link href="/login" className="glass-button text-sm">
+              <Link href="/login" className="glass-button text-sm hidden sm:block">
                 Log in
               </Link>
               <Link href="/signup" className="primary-button text-sm hidden sm:flex">
                 Sign up
               </Link>
+              <MobileMenu user={user} isAdmin={isAdmin} />
             </>
           )}
+          <ThemeToggle />
         </div>
       </div>
     </nav>

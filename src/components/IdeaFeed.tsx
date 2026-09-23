@@ -10,10 +10,14 @@ export default function IdeaFeed({
   initialIdeas,
   userAge,
   isAuthenticated,
+  category = "All",
+  sort = "newest",
 }: {
   initialIdeas: Idea[];
   userAge: number | null;
   isAuthenticated: boolean;
+  category?: string;
+  sort?: string;
 }) {
   const [ideas, setIdeas] = useState<Idea[]>(initialIdeas);
   const [loading, setLoading] = useState(false);
@@ -26,7 +30,13 @@ export default function IdeaFeed({
     if (loading || done || !lastCreatedAt) return;
     setLoading(true);
     try {
-      const res = await fetch(`/api/feed?before=${encodeURIComponent(lastCreatedAt)}&limit=${PAGE_SIZE}`);
+      const params = new URLSearchParams({
+        before: lastCreatedAt,
+        limit: PAGE_SIZE.toString(),
+        category,
+        sort,
+      });
+      const res = await fetch(`/api/feed?${params.toString()}`);
       const data = await res.json();
       const next = data.ideas ?? [];
       if (next.length === 0) {
@@ -53,7 +63,7 @@ export default function IdeaFeed({
     observer.observe(el);
     return () => observer.disconnect();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [lastCreatedAt, loading, done]);
+  }, [lastCreatedAt, loading, done, category, sort]);
 
   return (
     <>

@@ -6,6 +6,7 @@ import Link from 'next/link'
 import ShareButton from '@/components/ShareButton'
 import ReportButton from '@/components/ReportButton'
 import UpvoteButton from '@/components/UpvoteButton'
+import Comments from '@/components/Comments'
 import { isAdminEmail } from '@/lib/admin'
 
 export const dynamic = 'force-dynamic';
@@ -63,6 +64,18 @@ export default async function IdeaDetailPage({ params }: IdeaPageProps) {
     `)
     .eq('id', id)
     .single()
+
+  // Fetch top-level comments for initial render
+  const { data: comments } = await supabase
+    .from('comments')
+    .select(`
+      *,
+      profiles:users(username)
+    `)
+    .eq('idea_id', id)
+    .is('parent_id', null)
+    .order('created_at', { ascending: true })
+    .limit(20)
 
   if (!idea) {
     notFound()
@@ -247,9 +260,7 @@ export default async function IdeaDetailPage({ params }: IdeaPageProps) {
             )}
           </div>
         ) : (
-          <div className="text-center py-12 border border-white/5 border-dashed rounded-xl bg-white/5">
-            <p className="text-muted-foreground">Threaded comments are coming soon.</p>
-          </div>
+          <Comments ideaId={idea.id} initialComments={comments ?? []} />
         )}
       </div>
 

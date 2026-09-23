@@ -1,10 +1,11 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { MessageSquare, Lock, ShieldAlert, GitFork } from "lucide-react";
+import { MessageSquare, Lock, ShieldAlert, GitFork, Bookmark } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 import UpvoteButton from "./UpvoteButton";
+import BookmarkButton from "./BookmarkButton";
 
 export type Idea = {
   id: string;
@@ -129,6 +130,7 @@ export default function IdeaCard({ idea, userAge, isAuthenticated, hasSignedNda 
         <div className="flex items-center justify-between pt-4 border-t border-white/10 mt-auto">
           <div className="flex items-center gap-4">
             <UpvoteButton ideaId={idea.id} initialCount={idea.upvotes_count} />
+            <BookmarkButton ideaId={idea.id} />
             <Link href={`/idea/${idea.id}`} className="flex items-center gap-1.5 text-muted-foreground hover:text-white transition-colors">
               <div className="p-1.5 rounded-full bg-white/5">
                 <MessageSquare className="w-4 h-4" />

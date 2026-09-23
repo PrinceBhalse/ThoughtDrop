@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import IdeaCard, { type Idea } from '@/components/IdeaCard'
 import { User, Activity, Bookmark, Settings } from 'lucide-react'
+import { getBookmarks } from '@/app/bookmarks/actions'
 
 export default async function ProfilePage() {
   const supabase = await createClient()
@@ -29,6 +30,22 @@ export default async function ProfilePage() {
     `)
     .eq('user_id', user.id)
     .order('created_at', { ascending: false })
+
+  // Get Bookmarked Ideas
+  const bookmarksResult = await getBookmarks()
+  let bookmarkedIdeas: Idea[] = []
+  if (Array.isArray(bookmarksResult) && bookmarksResult.length > 0) {
+    const bookmarkedIds = bookmarksResult.map((b) => b.idea_id)
+    const { data } = await supabase
+      .from('ideas')
+      .select(`
+        *,
+        profiles:users(username),
+        communities(name)
+      `)
+      .in('id', bookmarkedIds)
+    bookmarkedIdeas = (data ?? []).filter((i) => i.is_hidden !== true)
+  }
 
   return (
     <div className="max-w-4xl mx-auto space-y-8">
@@ -62,7 +79,7 @@ export default async function ProfilePage() {
           <Activity className="w-4 h-4" /> Shared Ideas
         </button>
         <button className="px-4 py-2 font-medium text-muted-foreground hover:text-white transition-colors flex items-center gap-2">
-          <Bookmark className="w-4 h-4" /> Saved Ideas
+          <Bookmark className="w-4 h-4" /> Saved Ideas ({bookmarkedIdeas.length})
         </button>
       </div>
 
@@ -70,17 +87,31 @@ export default async function ProfilePage() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {ideas && ideas.length > 0 ? (
           ideas.map((idea) => (
-            <IdeaCard 
-              key={idea.id} 
-              idea={idea as Idea} 
-              userAge={21} // We know the user is authenticated and this is their own profile, so they can see their own adult content or we skip the guard. Let's just pass 21 to bypass for their own items.
-              isAuthenticated={true} 
+            <IdeaCard
+              key={idea.id}
+              idea={idea as Idea}
+              userAge={21}
+              isAuthenticated={true}
             />
           ))
         ) : (
           <div className="col-span-2 text-center p-12 glass-panel">
             <p className="text-muted-foreground">You haven&apos;t shared any ideas yet.</p>
           </div>
+        )}
+
+        {/* Bookmarked Ideas (Saved Ideas tab content) */}
+        {bookmarkedIdeas.length > 0 && (
+          <>
+            {bookmarkedIdeas.map((idea) => (
+              <IdeaCard
+                key={idea.id}
+                idea={idea as Idea}
+                userAge={21}
+                isAuthenticated={true}
+              />
+            ))}
+          </>
         )}
       </div>
     </div>
