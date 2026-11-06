@@ -18,12 +18,24 @@ Please keep signed in, in one browser window:
 
 1. Go to `https://supabase.com` and sign in.
 2. Open **Dashboard**. You will see either:
-   - your project with a **Restore** button (free projects pause after ~7 days without use), or
+   - your project with a **Restore** button (it exists; last seen applied migrations
+     `0000`+`0001`, i.e. base tables only — comments/notifications/follows/blocks and
+     everything beyond `0001` is missing), or
    - an empty list.
-3. **If you see Restore:** click it, wait for it to finish, then jump to **1c** and check
-   that the data survived. Done in 2 minutes. **Stop here and do this first.**
-4. **If the list is empty:** the project is gone. Follow **1b**. Your data cannot be
-   recovered, but your schema can be rebuilt from the files in `supabase/migrations`.
+
+### Choose one path:
+
+**Path A — keep the data (restore + upgrade in place):** click Restore, wait, then run
+`0002` → `0014` in order. `0000` and `0001` will report "already exists" — skip them.
+Migration `0007` upgrades the legacy `comments` table (adds `author_id`, `parent_id`,
+`updated_at`, drops `user_id`, backfills both) — data is preserved.
+
+**Path B — start clean (no real data yet):** create a new project and run
+`0000` → `0014` in order. Everything is green from scratch — `0007` works on both
+schemas.
+
+Both paths end at the same final database shape. If you have content in the old project
+you care about, Path A is required; if it was only testing data, Path B is simpler.
 
 ### 1b. Create a new project (only if needed)
 
@@ -54,12 +66,18 @@ Please keep signed in, in one browser window:
 1. Left sidebar → **SQL Editor** (terminal icon).
 2. Click **+ New query**.
 3. Open `D:\ThoughtDrop\supabase\migrations`. There are 15 files numbered `0000`–`0014`.
-4. For **each file, in numeric order**:
+4. For **each file, in numeric order** (Path B: all of `0000`→`0014`; Path A: skip
+   `0000` and `0001`):
    - Open it in Notepad → `Ctrl+A`, `Ctrl+C`
    - Back in the browser: paste into the SQL Editor
    - Click **Run** (green button, or `Ctrl+Enter`)
-   - Wait for **"Success. No rows returned"** (red message? note the file and the words,
-     skip to the next file)
+   - Wait for **"Success. No rows returned"** (red message? note the file and the words;
+     `relation ... already exists` = object already there, skip this file;
+     `function or relation "y" does not exist` = you skipped the file that creates "y")
+
+**Both paths now lead to the same final database shape.** Migration `0007` was rewritten
+to upgrade the legacy `comments` table in place (adds `author_id`, `parent_id`,
+`updated_at`, drops `user_id`, preserves rows), so Path A and Path B behave identically.
 5. Final verification — run these in the SQL Editor, all should return rows:
 
    ```sql

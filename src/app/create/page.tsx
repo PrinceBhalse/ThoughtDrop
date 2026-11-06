@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { Suspense, useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { Loader2 } from "lucide-react";
 import { createIdea } from "./actions";
 import RichTextEditor from "@/components/RichTextEditor";
 import { createClient } from "@/utils/supabase/client";
@@ -9,6 +10,20 @@ import { useToast } from "@/components/ui/Toast";
 import { Bot, GitFork, ShieldAlert, Hash } from "lucide-react";
 
 export default function CreateIdeaPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex justify-center items-center py-32">
+          <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+        </div>
+      }
+    >
+      <CreateIdeaForm />
+    </Suspense>
+  );
+}
+
+function CreateIdeaForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { toast } = useToast();
