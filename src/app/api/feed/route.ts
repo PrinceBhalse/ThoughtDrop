@@ -1,5 +1,6 @@
 import { createClient } from '@/utils/supabase/server'
 import { NextResponse, type NextRequest } from 'next/server'
+import { getBlockedUserIds } from '@/lib/social'
 
 export const dynamic = 'force-dynamic'
 
@@ -21,8 +22,10 @@ export async function GET(request: NextRequest) {
   const rawLimit = Number(request.nextUrl.searchParams.get('limit') ?? PAGE_SIZE)
   const limit = Number.isFinite(rawLimit) ? Math.min(Math.max(rawLimit, 1), 40) : PAGE_SIZE
 
-  // Get current user for "following" sort
+  // Get current user for "following" sort + block filtering
   const { data: { user } } = await supabase.auth.getUser()
+
+  const blockedIds = user ? await getBlockedUserIds(supabase) : []
 
   let query = supabase
     .from('ideas')
@@ -31,6 +34,11 @@ export async function GET(request: NextRequest) {
   // Category filter (skip 'All')
   if (category && category !== 'All') {
     query = query.eq('category', category)
+  }
+
+  // Never surface content from blocked accounts
+  if (blockedIds.length > 0) {
+    query = query.not('user_id', 'in', `(${blockedIds.join(',')})`)
   }
 
   // Following sort - filter by followed users
@@ -76,12 +84,12 @@ export async function GET(request: NextRequest) {
   if (sort === 'trending') {
     ideas = ideas
       .map((idea) => ({
-        ...idea,
-        trendingScore: computeTrendingScore(idea.upvotes_count || 0, idea.created_at),
+        idea,
+        score: computeTrendingScore(idea.upvotes_count || 0, idea.created_at),
       }))
-      .sort((a, b) => b.trendingScore - a.trendingScore)
+      .sort((a, b) => b.score - a.score)
       .slice(0, limit)
-      .map(({ trendingScore, ...rest }) => rest)
+      .map((entry) => entry.idea)
   }
 
   // Apply cursor pagination for non-trending sorts

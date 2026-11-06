@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#0b0d12" />
+    <title>ThoughtDrop</title>
+    <style>
+      :root {
+        --bg: #0b0d12;
+        --surface: #131620;
+        --fg: #e7e9ee;
+        --muted: #8b93a3;
+        --primary: #4f6ef7;
+        --border: #232838;
+      }
+      * { box-sizing: border-box; }
+      html, body {
+        margin: 0;
+        height: 100%;
+        background: var(--bg);
+        color: var(--fg);
+        font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+        -webkit-font-smoothing: antialiased;
+        overscroll-behavior: none;
+      }
+      .shell {
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 20px;
+        padding: 32px;
+        text-align: center;
+        background-image: radial-gradient(900px 400px at 50% -10%, hsla(235, 62%, 22%, 0.55), transparent 60%);
+      }
+      .mark {
+        width: 92px;
+        height: 92px;
+        border-radius: 22px;
+        border: 1px solid var(--border);
+        background: var(--surface);
+        display: grid;
+        place-items: center;
+        box-shadow: 0 18px 50px rgba(0, 0, 0, 0.45);
+      }
+      .mark span {
+        font-size: 40px;
+        line-height: 1;
+        font-weight: 800;
+        letter-spacing: -0.04em;
+        color: var(--primary);
+      }
+      h1 { margin: 0; font-size: 20px; letter-spacing: -0.02em; }
+      p { margin: 0; color: var(--muted); font-size: 14px; max-width: 30ch; line-height: 1.5; }
+      .bar {
+        width: 168px;
+        height: 3px;
+        border-radius: 999px;
+        background: var(--border);
+        overflow: hidden;
+      }
+      .bar i {
+        display: block;
+        height: 100%;
+        width: 40%;
+        border-radius: 999px;
+        background: var(--primary);
+        animation: slide 1.1s ease-in-out infinite;
+      }
+      @keyframes slide {
+        0% { transform: translateX(-100%); }
+        100% { transform: translateX(320%); }
+      }
+      button {
+        margin-top: 6px;
+        padding: 11px 22px;
+        border-radius: 10px;
+        border: 1px solid var(--border);
+        background: var(--primary);
+        color: #fff;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+      }
+      button.ghost { background: transparent; color: var(--muted); }
+      .hidden { display: none !important; }
+    </style>
+  </head>
+  <body>
+    <div class="shell">
+      <div class="mark"><span>T</span></div>
+      <h1>ThoughtDrop</h1>
+      <p id="msg">Connecting you to the community…</p>
+      <div class="bar" id="bar"><i></i></div>
+      <button id="retry" class="hidden">Try again</button>
+      <button id="browser" class="ghost hidden">Open in browser</button>
+    </div>
+
+    <script>
+      // Where the hosted Next.js app lives. Kept in sync with capacitor.config.ts.
+      var APP_URL = "https://thoughtdrop.app";
+      var PING = APP_URL.replace(/\/$/, "") + "/api/feed?limit=1";
+
+      function showError(message) {
+        document.getElementById("msg").textContent = message;
+        document.getElementById("bar").classList.add("hidden");
+        document.getElementById("retry").classList.remove("hidden");
+        document.getElementById("browser").classList.remove("hidden");
+      }
+
+      function go() {
+        // Replace (not assign) so the Back button leaves the app instead of
+        // bouncing the user between this loader and the site.
+        window.location.replace(APP_URL);
+      }
+
+      function attempt() {
+        var controller = new AbortController();
+        var timer = setTimeout(function () { controller.abort(); }, 8000);
+        fetch(PING, { method: "GET", signal: controller.signal, cache: "no-store" })
+          .then(function () {
+            clearTimeout(timer);
+            go();
+          })
+          .catch(function () {
+            clearTimeout(timer);
+            showError("No connection to ThoughtDrop. Check your network and try again.");
+          });
+      }
+
+      document.getElementById("retry").addEventListener("click", function () {
+        document.getElementById("retry").classList.add("hidden");
+        document.getElementById("browser").classList.add("hidden");
+        document.getElementById("bar").classList.remove("hidden");
+        document.getElementById("msg").textContent = "Connecting you to the community…";
+        attempt();
+      });
+
+      document.getElementById("browser").addEventListener("click", function () {
+        window.open(APP_URL, "_system");
+      });
+
+      attempt();
+    </script>
+  </body>
+</html>

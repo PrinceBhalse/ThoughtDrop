@@ -1,5 +1,6 @@
 import { createClient } from '@/utils/supabase/server'
 import { NextResponse, type NextRequest } from 'next/server'
+import { dispatchPendingPushes } from '@/lib/push-dispatch'
 
 export const dynamic = 'force-dynamic'
 
@@ -10,6 +11,12 @@ export async function GET(request: NextRequest) {
   if (!user) {
     return NextResponse.json({ notifications: [], unreadCount: 0 })
   }
+
+  // Deliver anything still pending as a native push (no-op on the web build
+  // when Firebase is not configured).
+  dispatchPendingPushes(supabase, user.id).catch((error) =>
+    console.error('[notifications] push dispatch failed:', error)
+  )
 
   const limit = Math.min(Number(request.nextUrl.searchParams.get('limit') ?? 20), 50)
   const unreadOnly = request.nextUrl.searchParams.get('unread') === 'true'

@@ -42,3 +42,17 @@ next-env.d.ts
 
 # supabase temp
 supabase/.temp/
+
+# capacitor / android
+/android/app/src/main/assets/public
+/android/app/src/main/assets/capacitor.config.json
+/android/app/src/main/assets/capacitor.plugins.json
+/android/app/build/
+/android/.gradle/
+/android/capacitor-cordova-android-plugins/
+/android/local.properties
+/android/keystore.properties
+/android/app/*.keystore
+/android/app/*.jks
+/android/app/google-services.json
+

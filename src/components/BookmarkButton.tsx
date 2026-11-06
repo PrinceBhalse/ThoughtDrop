@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Bookmark, BookmarkCheck } from "lucide-react";
 import { useToast } from "@/components/ui/Toast";
 import { toggleBookmark } from "@/app/bookmarks/actions";

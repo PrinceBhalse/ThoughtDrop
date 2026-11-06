@@ -13,6 +13,11 @@ export async function completeProfile(formData: FormData) {
 
   const username = formData.get('username') as string
   const dob = formData.get('dob') as string
+  const termsAccepted = formData.get('terms') === 'accepted'
+
+  if (!termsAccepted) {
+    redirect('/onboarding?error=terms')
+  }
 
   const { error } = await supabase
     .from('users')
@@ -20,6 +25,7 @@ export async function completeProfile(formData: FormData) {
       id: user.id,
       username,
       date_of_birth: dob,
+      terms_accepted_at: new Date().toISOString(),
     })
 
   if (error) {

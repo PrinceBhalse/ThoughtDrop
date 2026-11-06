@@ -3,9 +3,10 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Loader2, User } from "lucide-react";
+import { ArrowLeft, Loader2, User, Trash2 } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
 import { useToast } from "@/components/ui/Toast";
+import LegalLinks from "@/components/LegalLinks";
 import { updateProfile } from "./actions";
 
 interface Profile {
@@ -163,6 +164,23 @@ export default function EditProfilePage() {
           </button>
         </div>
       </form>
+
+      <section className="glass-panel p-6 space-y-4">
+        <div>
+          <h2 className="font-semibold">Account</h2>
+          <p className="text-sm text-muted-foreground mt-1">
+            Deleting your account removes your profile, ideas, images and activity. This cannot be
+            undone.
+          </p>
+        </div>
+        <Link
+          href="/account/delete"
+          className="inline-flex items-center gap-2 rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-2 text-sm font-medium text-red-400 transition-colors hover:bg-red-500/20"
+        >
+          <Trash2 className="w-4 h-4" /> Delete account
+        </Link>
+        <LegalLinks className="pt-2 border-t border-border" />
+      </section>
     </div>
   );
 }

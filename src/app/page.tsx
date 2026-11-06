@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import IdeaFeed from '@/components/IdeaFeed'
 import EmptyState from '@/components/EmptyState'
-import IdeaCard, { type Idea } from '@/components/IdeaCard'
+import { type Idea } from '@/components/IdeaCard'
 import { Coins } from 'lucide-react'
 
 export default function Home() {

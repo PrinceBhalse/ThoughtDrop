@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Share2, Check } from "lucide-react";
 import { useToast } from "@/components/ui/Toast";
+import { isNative } from "@/lib/native";
 
 interface ShareButtonProps {
   title: string;
@@ -14,6 +15,17 @@ export default function ShareButton({ title, url }: ShareButtonProps) {
   const [copied, setCopied] = useState(false);
 
   const handleShare = async () => {
+    // Native apps get the Android share sheet (WhatsApp, X, Gmail, ...).
+    if (isNative()) {
+      try {
+        const { Share } = await import("@capacitor/share");
+        await Share.share({ title, text: title, url, dialogTitle: "Share this idea" });
+        return;
+      } catch {
+        // Fall through to the web share / clipboard path.
+      }
+    }
+
     if (navigator.share) {
       try {
         await navigator.share({ title, url });

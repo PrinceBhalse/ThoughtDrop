@@ -3,15 +3,25 @@ import { NextResponse, type NextRequest } from 'next/server'
 
 export const dynamic = 'force-dynamic'
 
-export async function GET(request: NextRequest) {
+/**
+ * Toggles a follow relationship.
+ *
+ * POST { target: "<user id>" } -> { following, followersCount }
+ *
+ * A POST is used because this mutates state; the previous GET implementation
+ * could be triggered by link prefetching or crawlers.
+ */
+export async function POST(request: NextRequest) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
   if (!user) {
-    return NextResponse.redirect(new URL('/login', request.url))
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const targetId = request.nextUrl.searchParams.get('target')
+  const body = await request.json().catch(() => ({}))
+  const targetId = (body as { target?: string }).target
+
   if (!targetId) {
     return NextResponse.json({ error: 'Missing target user' }, { status: 400 })
   }
@@ -28,6 +38,7 @@ export async function GET(request: NextRequest) {
     .maybeSingle()
 
   let following: boolean
+
   if (existing) {
     await supabase.from('follows').delete().eq('id', existing.id)
     following = false
@@ -36,6 +47,10 @@ export async function GET(request: NextRequest) {
     following = true
   }
 
-  const referer = request.headers.get('referer') || `/profile/${targetId}`
-  return NextResponse.redirect(referer)
+  const { count: followersCount } = await supabase
+    .from('follows')
+    .select('*', { count: 'exact', head: true })
+    .eq('following_id', targetId)
+
+  return NextResponse.json({ following, followersCount: followersCount ?? 0 })
 }

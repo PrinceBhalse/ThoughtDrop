@@ -4,6 +4,7 @@ import "./globals.css";
 import Navbar from "@/components/Navbar";
 import { ToastProvider } from "@/components/ui/Toast";
 import { ThemeProvider } from "@/components/ThemeProvider";
+import NativeApp from "@/components/NativeApp";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
 
@@ -15,8 +16,12 @@ export const metadata: Metadata = {
   description: "Share and discover brilliant ideas.",
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"),
   icons: {
-    icon: "/favicon.svg",
-    apple: "/favicon.svg",
+    icon: [
+      { url: "/favicon.svg", type: "image/svg+xml" },
+      { url: "/favicon-192.png", sizes: "192x192", type: "image/png" },
+      { url: "/favicon-512.png", sizes: "512x512", type: "image/png" },
+    ],
+    apple: "/favicon-192.png",
   },
   openGraph: {
     title: "ThoughtDrop",
@@ -24,9 +29,9 @@ export const metadata: Metadata = {
     type: "website",
     images: [
       {
-        url: "/favicon.svg",
-        width: 512,
-        height: 512,
+        url: "/og-image.png",
+        width: 1200,
+        height: 630,
         alt: "ThoughtDrop Logo",
       },
     ],
@@ -35,7 +40,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "ThoughtDrop",
     description: "Share and discover brilliant ideas.",
-    images: ["/favicon.svg"],
+    images: ["/og-image.png"],
   },
   robots: {
     index: true,
@@ -55,6 +60,7 @@ export default function RootLayout({
           className={`${inter.variable} font-sans antialiased bg-background text-foreground`}
         >
           <Navbar />
+          <NativeApp />
           <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 pb-12">
             <ToastProvider>{children}</ToastProvider>
           </main>

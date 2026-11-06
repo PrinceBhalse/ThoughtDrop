@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { MessageSquare, Lock, ShieldAlert, GitFork, Bookmark } from "lucide-react";
+import { MessageSquare, Lock, ShieldAlert, GitFork } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 import UpvoteButton from "./UpvoteButton";

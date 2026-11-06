@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { X, Menu, Hash, User, Plus, LogOut, Bell, Settings, ChevronRight } from "lucide-react";
+import { useEffect } from "react";
+import { X, Hash, User, Plus, LogOut, Settings, ChevronRight } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import NotificationBell from "./NotificationBell";
@@ -14,20 +14,17 @@ interface MobileDrawerProps {
 }
 
 export default function MobileDrawer({ isOpen, onClose, user, isAdmin }: MobileDrawerProps) {
-  const [mounted, setMounted] = useState(false)
   const pathname = usePathname()
 
   useEffect(() => {
-    setMounted(true)
-    if (isOpen) {
-      document.body.style.overflow = 'hidden'
-    }
+    if (!isOpen) return
+    document.body.style.overflow = 'hidden'
     return () => {
       document.body.style.overflow = 'unset'
     }
   }, [isOpen])
 
-  if (!mounted || !isOpen) return null
+  if (!isOpen) return null
 
   const navItems = [
     { href: '/', label: 'Home', icon: <ChevronRight className="w-5 h-5" /> },

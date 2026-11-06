@@ -4,7 +4,17 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowUp } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { isNative } from "@/lib/native";
 import { toggleUpvote } from "@/app/actions/upvote";
+
+function haptic() {
+  if (!isNative()) return;
+  import("@capacitor/haptics")
+    .then(({ Haptics, ImpactStyle }) =>
+      Haptics.impact({ style: ImpactStyle.Light })
+    )
+    .catch(() => {});
+}
 
 export default function UpvoteButton({
   ideaId,
@@ -21,6 +31,7 @@ export default function UpvoteButton({
   const [pending, startTransition] = useTransition();
 
   const handleClick = () => {
+    haptic();
     // Optimistic update
     const willUpvote = !upvoted;
     setUpvoted(willUpvote);

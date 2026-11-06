@@ -99,6 +99,8 @@ const MenuBar = ({ editor }: { editor: Editor | null }) => {
       {/* Add Image */}
       <ImageUploadButton editor={editor} />
 
+      <LinkButton editor={editor} />
+
       <div className="w-px h-6 bg-white/10 mx-1" />
 
       <button
@@ -171,6 +173,36 @@ function ImageUploadButton({ editor }: { editor: Editor | null }) {
         {uploading && <span className="ml-1 text-xs">Uploading...</span>}
       </button>
     </label>
+  )
+}
+
+function LinkButton({ editor }: { editor: Editor | null }) {
+  const applyLink = () => {
+    if (!editor) return
+
+    const existing = editor.getAttributes('link').href as string | undefined
+    const input = window.prompt('Link URL', existing ?? 'https://')
+    if (input === null) return
+
+    if (input.trim() === '') {
+      editor.chain().focus().extendMarkRange('link').unsetLink().run()
+      return
+    }
+
+    const href = /^(https?:\/\/|\/)/i.test(input.trim()) ? input.trim() : `https://${input.trim()}`
+    editor.chain().focus().extendMarkRange('link').setLink({ href }).run()
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={applyLink}
+      disabled={!editor}
+      className="p-2 rounded hover:bg-white/10 transition-colors text-muted-foreground disabled:opacity-50"
+      title="Add Link"
+    >
+      <LinkIcon className="w-4 h-4" />
+    </button>
   )
 }
 

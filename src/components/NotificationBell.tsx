@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
-import { Bell, BellRing, X, Check, MessageSquare, Heart, UserPlus, Users, GitFork, ExternalLink } from "lucide-react";
+import { Bell, BellRing, Check, MessageSquare, Heart, UserPlus, Users } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 
 interface Notification {
@@ -40,24 +40,30 @@ export default function NotificationBell() {
   const panelRef = useRef<HTMLDivElement>(null);
 
   // Fetch notifications
-  const fetchNotifications = async () => {
-    try {
-      const res = await fetch('/api/notifications?limit=20');
-      const data = await res.json();
-      setNotifications(data.notifications || []);
-      setUnreadCount(data.unreadCount || 0);
-    } catch (e) {
-      console.error('Failed to fetch notifications:', e);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   useEffect(() => {
-    fetchNotifications();
+    let active = true;
+
+    const load = async () => {
+      try {
+        const res = await fetch('/api/notifications?limit=20');
+        const data = await res.json();
+        if (!active) return;
+        setNotifications(data.notifications || []);
+        setUnreadCount(data.unreadCount || 0);
+      } catch (e) {
+        console.error('Failed to fetch notifications:', e);
+      } finally {
+        if (active) setLoading(false);
+      }
+    };
+
+    void load();
     // Poll for new notifications every 30 seconds
-    const interval = setInterval(fetchNotifications, 30_000);
-    return () => clearInterval(interval);
+    const interval = setInterval(() => void load(), 30_000);
+    return () => {
+      active = false;
+      clearInterval(interval);
+    };
   }, []);
 
   // Close on outside click

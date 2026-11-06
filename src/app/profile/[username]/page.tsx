@@ -2,7 +2,9 @@ import { createClient } from '@/utils/supabase/server'
 import { notFound } from 'next/navigation'
 import type { Metadata } from 'next'
 import IdeaCard, { type Idea } from '@/components/IdeaCard'
-import { User, Activity, Bookmark, Award, ExternalLink } from 'lucide-react'
+import FollowButton from '@/components/FollowButton'
+import UserSafetyButtons from '@/components/UserSafetyButtons'
+import { User, Activity, Award, ExternalLink, Ban } from 'lucide-react'
 import Link from 'next/link'
 
 interface PublicProfilePageProps {
@@ -20,7 +22,6 @@ export async function generateMetadata({ params }: PublicProfilePageProps): Prom
 
   if (!profile) return { title: 'Profile not found' }
 
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'
   return {
     title: `@${profile.username} — ThoughtDrop`,
     description: profile.bio || `Explore ${profile.username}'s ideas on ThoughtDrop`,
@@ -28,10 +29,8 @@ export async function generateMetadata({ params }: PublicProfilePageProps): Prom
       title: `@${profile.username}`,
       description: profile.bio || `Explore ${profile.username}'s ideas on ThoughtDrop`,
       type: 'profile',
-      profile: {
-        username: profile.username,
-      },
-    } as any,
+      username: profile.username,
+    },
   }
 }
 
@@ -51,6 +50,34 @@ export default async function PublicProfilePage({ params }: PublicProfilePagePro
   // Check if current user is viewing their own profile
   const { data: { user } } = await supabase.auth.getUser()
   const isOwnProfile = user?.id === profile.id
+
+  // Blocking (migration 0014). When true, this profile shows a neutral state:
+  // no ideas, counts, follow state or safety actions beyond Unblock.
+  let isBlocked = false
+  if (user && !isOwnProfile) {
+    const { data: block } = await supabase
+      .from('user_blocks')
+      .select('id')
+      .eq('blocker_id', user.id)
+      .eq('blocked_id', profile.id)
+      .maybeSingle()
+    isBlocked = !!block
+  }
+  if (isBlocked) {
+    return (
+      <div className="max-w-4xl mx-auto space-y-8">
+        <div className="glass-panel p-8 text-center space-y-4">
+          <Ban className="w-10 h-10 mx-auto text-muted-foreground" />
+          <h1 className="text-xl font-semibold">@{profile.username || 'user'} is blocked</h1>
+          <p className="text-sm text-muted-foreground max-w-md mx-auto">
+            You will not see ideas, comments or notifications from this account. You can unblock
+            at any time.
+          </p>
+          <UserSafetyButtons targetId={profile.id} />
+        </div>
+      </div>
+    )
+  }
 
   // Get user's ideas
   const { data: ideas } = await supabase
@@ -116,19 +143,15 @@ export default async function PublicProfilePage({ params }: PublicProfilePagePro
               <span className="flex items-center gap-1"><User className="w-4 h-4"/> {followingCount || 0} Following</span>
             </p>
           </div>
-          {!isOwnProfile && user && (
-            <button 
-              id="follow-btn"
-              onClick={() => window.location.href = `/api/follow?target=${profile.id}`}
-              className={`shrink-0 px-4 py-2 rounded-lg font-medium transition-colors ${
-                isFollowing 
-                  ? 'bg-white/5 text-muted-foreground hover:bg-red-500/20 hover:text-red-400 border border-white/10' 
-                  : 'primary-button'
-              }`}
-            >
-              {isFollowing ? 'Following' : 'Follow'}
-            </button>
+          {!isOwnProfile && user && <UserSafetyButtons targetId={profile.id} />}
+          {!isOwnProfile && (
+            <FollowButton
+              targetId={profile.id}
+              initialFollowing={isFollowing}
+              initialFollowers={followersCount || 0}
+            />
           )}
+          {!user && !isOwnProfile && <span className="text-sm text-muted-foreground">Sign in to follow</span>}
         </div>
       </div>
 

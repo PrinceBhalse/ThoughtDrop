@@ -1,18 +1,23 @@
 "use client";
 
 import { useTheme } from "next-themes";
-import { useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
 import { Sun, Moon, Monitor } from "lucide-react";
 
+// Hydration-safe "is the client mounted" check without setState in an effect.
+const subscribe = () => () => {};
+const useHydrated = () =>
+  useSyncExternalStore(
+    subscribe,
+    () => true,
+    () => false
+  );
+
 export default function ThemeToggle() {
-  const [mounted, setMounted] = useState(false);
+  const hydrated = useHydrated();
   const { theme, setTheme, resolvedTheme } = useTheme();
 
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  if (!mounted) {
+  if (!hydrated) {
     return (
       <button className="glass-button p-2 rounded-full" aria-label="Theme toggle">
         <Monitor className="w-5 h-5" />

@@ -2,9 +2,13 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { motion, type Variants } from "framer-motion";
-import { Hash, Loader2, Lock, MessageSquare, Sparkles } from "lucide-react";
+import { Hash, Loader2, Lock, Mail, MessageSquare, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { createClient } from "@/utils/supabase/client";
+import { isNative, NATIVE_OAUTH_CALLBACK } from "@/lib/native";
+import { useToast } from "@/components/ui/Toast";
 import { loginWithProvider } from "@/app/login/actions";
 
 type AuthMode = "signin" | "signup";
@@ -63,13 +67,97 @@ const PROVIDERS: { id: Provider; label: string; icon: React.ReactNode }[] = [
 ];
 
 export default function AuthScreen({ mode }: { mode: AuthMode }) {
+  const router = useRouter();
+  const { toast } = useToast();
   const [pending, setPending] = useState<Provider | null>(null);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [emailPending, setEmailPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const isSignup = mode === "signup";
 
-  const handleProvider = (provider: Provider) => {
-    if (pending) return;
+  const handleProvider = async (provider: Provider) => {
+    if (pending || emailPending) return;
     setPending(provider);
+    setError(null);
+
+    // On Android the WebView hands external navigations to the system browser,
+    // so a server redirect would leave the session in Chrome. Run PKCE in the
+    // WebView instead and return through a custom-scheme deep link.
+    if (isNative()) {
+      try {
+        const { Browser } = await import("@capacitor/browser");
+        const supabase = createClient();
+        const { data, error: oauthError } = await supabase.auth.signInWithOAuth({
+          provider,
+          options: {
+            redirectTo: NATIVE_OAUTH_CALLBACK,
+            skipBrowserRedirect: true,
+          },
+        });
+
+        if (oauthError || !data?.url) {
+          throw new Error(oauthError?.message || "Could not start sign-in");
+        }
+
+        await Browser.open({ url: data.url, presentationStyle: "popover" });
+      } catch (err) {
+        setPending(null);
+        setError(err instanceof Error ? err.message : "Could not start sign-in");
+      }
+      return;
+    }
+
     loginWithProvider(provider).catch(() => setPending(null));
+  };
+
+  const handleEmail = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (emailPending) return;
+
+    setEmailPending(true);
+    setError(null);
+    setNotice(null);
+
+    try {
+      const supabase = createClient();
+
+      if (isSignup) {
+        const { data, error: signUpError } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            emailRedirectTo: `${window.location.origin}/auth/callback`,
+          },
+        });
+
+        if (signUpError) throw signUpError;
+
+        if (data.session) {
+          router.push("/onboarding");
+          router.refresh();
+          return;
+        }
+
+        setNotice("Check your email to confirm your account, then sign in.");
+        toast("Confirmation email sent", "success");
+      } else {
+        const { error: signInError } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
+
+        if (signInError) throw signInError;
+
+        router.push("/");
+        router.refresh();
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Authentication failed");
+    } finally {
+      setEmailPending(false);
+    }
   };
 
   const tabClass = (active: boolean) =>
@@ -172,12 +260,82 @@ export default function AuthScreen({ mode }: { mode: AuthMode }) {
             </p>
           </div>
 
+          <form onSubmit={handleEmail} className="space-y-3 relative">
+            <div>
+              <label htmlFor="email" className="sr-only">
+                Email
+              </label>
+              <div className="relative">
+                <Mail className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <input
+                  id="email"
+                  type="email"
+                  required
+                  autoComplete="email"
+                  inputMode="email"
+                  value={email}
+                  onChange={(event) => setEmail(event.target.value)}
+                  placeholder="you@example.com"
+                  className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 py-3 text-sm placeholder:text-muted-foreground/70 focus:outline-none focus:ring-2 focus:ring-primary"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label htmlFor="password" className="sr-only">
+                Password
+              </label>
+              <div className="relative">
+                <Lock className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <input
+                  id="password"
+                  type="password"
+                  required
+                  minLength={6}
+                  autoComplete={isSignup ? "new-password" : "current-password"}
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                  placeholder={isSignup ? "Create a password (6+ characters)" : "Password"}
+                  className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 py-3 text-sm placeholder:text-muted-foreground/70 focus:outline-none focus:ring-2 focus:ring-primary"
+                />
+              </div>
+            </div>
+
+            {error && <p className="text-sm text-red-400">{error}</p>}
+            {notice && <p className="text-sm text-primary">{notice}</p>}
+
+            <button
+              type="submit"
+              disabled={emailPending || pending !== null}
+              className="primary-button w-full py-3.5 text-base font-semibold disabled:opacity-60 disabled:cursor-wait"
+            >
+              {emailPending ? (
+                <span className="inline-flex items-center justify-center gap-2">
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  {isSignup ? "Creating account…" : "Signing in…"}
+                </span>
+              ) : isSignup ? (
+                "Create account"
+              ) : (
+                "Sign in"
+              )}
+            </button>
+          </form>
+
+          <div className="relative my-7 flex items-center gap-3">
+            <span className="h-px flex-1 bg-white/10" />
+            <span className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
+              or
+            </span>
+            <span className="h-px flex-1 bg-white/10" />
+          </div>
+
           <div className="space-y-3 relative">
             {PROVIDERS.map((provider) => (
               <button
                 key={provider.id}
                 onClick={() => handleProvider(provider.id)}
-                disabled={pending !== null}
+                disabled={pending !== null || emailPending}
                 className="group w-full glass-button py-3.5 text-base font-medium hover:bg-white/10 hover:border-primary/40 disabled:opacity-60 disabled:cursor-wait transition-all hover:-translate-y-0.5 active:translate-y-0"
               >
                 <span className="flex items-center justify-center gap-3">
@@ -199,8 +357,14 @@ export default function AuthScreen({ mode }: { mode: AuthMode }) {
 
           <p className="mt-8 text-xs text-center text-muted-foreground leading-relaxed relative">
             By continuing you agree to our{" "}
-            <span className="text-foreground/80 font-medium">Terms of Service</span> and{" "}
-            <span className="text-foreground/80 font-medium">Privacy Policy</span>.
+            <Link href="/terms" className="text-foreground/80 font-medium underline hover:text-foreground">
+              Terms of Service
+            </Link>{" "}
+            and{" "}
+            <Link href="/privacy" className="text-foreground/80 font-medium underline hover:text-foreground">
+              Privacy Policy
+            </Link>
+            .
           </p>
         </motion.div>
       </div>

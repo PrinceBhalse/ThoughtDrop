@@ -3,7 +3,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { createClient } from "@/utils/supabase/client";
 import { useToast } from "@/components/ui/Toast";
-import { MessageSquare, ChevronRight, Loader2, Edit2, Trash2 } from "lucide-react";
+import { getBlockedUserIds } from "@/lib/social";
+import { MessageSquare, ChevronRight, Loader2, Edit2, Trash2, Flag, Ban } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 
 interface Comment {
@@ -24,25 +25,120 @@ interface CommentsProps {
   initialComments?: Comment[];
 }
 
-function CommentThread({ comments, ideaId, level = 0 }: { comments: Comment[]; ideaId: string; level?: number }) {
+const INDENT_CLASSES = ["ml-0", "ml-4", "ml-8", "ml-12", "ml-16"];
+
+/** Remove comments (and their reply trees) authored by accounts the user blocked. */
+function withoutBlocked(list: Comment[], blockedIds: string[]): Comment[] {
+  if (blockedIds.length === 0) return list;
+  return list
+    .filter((comment) => !blockedIds.includes(comment.author_id))
+    .map((comment) => ({
+      ...comment,
+      replies: withoutBlocked(comment.replies ?? [], blockedIds),
+    }));
+}
+
+function CommentThread({
+  comments,
+  ideaId,
+  level = 0,
+  currentUserId,
+  onRefresh,
+  blockedIds,
+  onBlock,
+}: {
+  comments: Comment[];
+  ideaId: string;
+  level?: number;
+  currentUserId: string | null;
+  onRefresh: () => void;
+  blockedIds: string[];
+  onBlock: (authorId: string) => void;
+}) {
   return (
-    <div className={`ml-${level * 4} space-y-3`}>
-      {comments.map((comment) => (
-        <CommentItem key={comment.id} comment={comment} ideaId={ideaId} level={level} />
+    <div className={`${INDENT_CLASSES[Math.min(level, INDENT_CLASSES.length - 1)]} space-y-3`}>
+      {withoutBlocked(comments, blockedIds).map((comment) => (
+        <CommentItem
+          key={comment.id}
+          comment={comment}
+          ideaId={ideaId}
+          level={level}
+          currentUserId={currentUserId}
+          onRefresh={onRefresh}
+          blockedIds={blockedIds}
+          onBlock={onBlock}
+        />
       ))}
     </div>
   );
 }
 
-function CommentItem({ comment, ideaId, level }: { comment: Comment; ideaId: string; level: number }) {
+function CommentItem({
+  comment,
+  ideaId,
+  level,
+  currentUserId,
+  onRefresh,
+  blockedIds,
+  onBlock,
+}: {
+  comment: Comment;
+  ideaId: string;
+  level: number;
+  currentUserId: string | null;
+  onRefresh: () => void;
+  blockedIds: string[];
+  onBlock: (authorId: string) => void;
+}) {
   const [showReplies, setShowReplies] = useState(false);
   const [editing, setEditing] = useState(false);
   const [editContent, setEditContent] = useState(comment.content);
   const [replying, setReplying] = useState(false);
   const [replyContent, setReplyContent] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [reported, setReported] = useState(false);
   const { toast } = useToast();
-  const isOwner = true; // TODO: check actual ownership
+  const isOwner = Boolean(currentUserId) && comment.author_id === currentUserId;
+
+  const handleReport = async () => {
+    if (!currentUserId) {
+      toast("Please log in to report comments", "error");
+      return;
+    }
+    try {
+      const supabase = createClient();
+      const { error } = await supabase.from("user_reports").insert({
+        reporter_id: currentUserId,
+        reported_id: comment.author_id,
+        reason: `comment: ${comment.content.slice(0, 200)}`,
+      });
+      if (error) throw error;
+      setReported(true);
+      toast("Thanks — reported for review", "success");
+    } catch {
+      toast("Could not report", "error");
+    }
+  };
+
+  const handleBlock = async () => {
+    if (!currentUserId) {
+      toast("Please log in to block users", "error");
+      return;
+    }
+    try {
+      const res = await fetch("/api/user/block", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ target: comment.author_id }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Could not block");
+      onBlock(comment.author_id);
+      toast("User blocked — their comments are hidden", "success");
+    } catch (error) {
+      toast(error instanceof Error ? error.message : "Could not block", "error");
+    }
+  };
 
   const handleEdit = async () => {
     setSubmitting(true);
@@ -55,7 +151,7 @@ function CommentItem({ comment, ideaId, level }: { comment: Comment; ideaId: str
       if (error) throw error;
       toast("Comment updated", "success");
       setEditing(false);
-      // Refresh would need parent callback - simplified
+      onRefresh();
     } catch {
       toast("Failed to update", "error");
     } finally {
@@ -70,7 +166,7 @@ function CommentItem({ comment, ideaId, level }: { comment: Comment; ideaId: str
       const { error } = await supabase.from("comments").delete().eq("id", comment.id);
       if (error) throw error;
       toast("Comment deleted", "success");
-      // Refresh needed
+      onRefresh();
     } catch {
       toast("Failed to delete", "error");
     }
@@ -91,7 +187,8 @@ function CommentItem({ comment, ideaId, level }: { comment: Comment; ideaId: str
       toast("Reply posted", "success");
       setReplying(false);
       setReplyContent("");
-      // Refresh needed
+      setShowReplies(true);
+      onRefresh();
     } catch {
       toast("Failed to reply", "error");
     } finally {
@@ -139,7 +236,7 @@ function CommentItem({ comment, ideaId, level }: { comment: Comment; ideaId: str
           <p className="mt-1 text-sm text-foreground whitespace-pre-wrap">{comment.content}</p>
         )}
 
-        <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
+        <div className="flex flex-wrap items-center gap-3 mt-2 text-xs text-muted-foreground">
           {isOwner && (
             <>
               <button onClick={() => setEditing(true)} className="hover:text-foreground transition-colors flex items-center gap-1">
@@ -147,6 +244,26 @@ function CommentItem({ comment, ideaId, level }: { comment: Comment; ideaId: str
               </button>
               <button onClick={handleDelete} className="hover:text-red-400 transition-colors flex items-center gap-1">
                 <Trash2 className="w-3.5 h-3.5" /> Delete
+              </button>
+            </>
+          )}
+          {!isOwner && currentUserId && (
+            <>
+              {reported ? (
+                <span className="flex items-center gap-1 text-muted-foreground">
+                  <Flag className="w-3.5 h-3.5" /> Reported
+                </span>
+              ) : (
+                <button onClick={handleReport} className="hover:text-red-400 transition-colors flex items-center gap-1">
+                  <Flag className="w-3.5 h-3.5" /> Report
+                </button>
+              )}
+              <button
+                onClick={handleBlock}
+                className="hover:text-red-400 transition-colors flex items-center gap-1"
+                aria-label="Block this user"
+              >
+                <Ban className="w-3.5 h-3.5" /> Block
               </button>
             </>
           )}
@@ -181,7 +298,15 @@ function CommentItem({ comment, ideaId, level }: { comment: Comment; ideaId: str
         )}
 
         {showReplies && comment.replies && comment.replies.length > 0 && (
-          <CommentThread comments={comment.replies} ideaId={ideaId} level={level + 1} />
+          <CommentThread
+            comments={comment.replies}
+            ideaId={ideaId}
+            level={level + 1}
+            currentUserId={currentUserId}
+            onRefresh={onRefresh}
+            blockedIds={blockedIds}
+            onBlock={onBlock}
+          />
         )}
       </div>
     </div>
@@ -193,10 +318,16 @@ export default function Comments({ ideaId, initialComments = [] }: CommentsProps
   const [newComment, setNewComment] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [blockedIds, setBlockedIds] = useState<string[]>([]);
   const { toast } = useToast();
 
-  const loadComments = useCallback(async () => {
-    setLoading(true);
+  const handleBlock = useCallback((authorId: string) => {
+    setBlockedIds((ids) => (ids.includes(authorId) ? ids : [...ids, authorId]));
+  }, []);
+
+  const loadComments = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
     try {
       const supabase = createClient();
       const { data, error } = await supabase
@@ -224,7 +355,7 @@ export default function Comments({ ideaId, initialComments = [] }: CommentsProps
     } catch {
       console.error("Failed to load comments");
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, [ideaId]);
 
@@ -243,6 +374,24 @@ export default function Comments({ ideaId, initialComments = [] }: CommentsProps
     }, 0);
     return () => clearTimeout(id);
   }, [ideaId, initialComments, loadComments]);
+
+  // Resolve the signed-in user so edit/delete controls are only shown to the author,
+  // and load the block list so blocked users' comments are hidden.
+  useEffect(() => {
+    let cancelled = false;
+    const supabase = createClient();
+    Promise.all([
+      supabase.auth.getUser(),
+      getBlockedUserIds(supabase),
+    ]).then(([auth, blocked]) => {
+      if (cancelled) return;
+      setCurrentUserId(auth.data.user?.id ?? null);
+      setBlockedIds(blocked);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const handleSubmit = async () => {
     if (!newComment.trim() || submitting) return;
@@ -276,7 +425,7 @@ export default function Comments({ ideaId, initialComments = [] }: CommentsProps
     <div className="mt-8 pt-8 border-t border-white/10">
       <h2 className="text-xl font-semibold mb-6 flex items-center gap-2">
         <MessageSquare className="w-5 h-5" />
-        Discussion ({comments.length})
+        Discussion ({withoutBlocked(comments, blockedIds).length})
       </h2>
 
       {loading ? (
@@ -305,7 +454,14 @@ export default function Comments({ ideaId, initialComments = [] }: CommentsProps
           </div>
 
           {/* Comments list */}
-          <CommentThread comments={comments} ideaId={ideaId} />
+          <CommentThread
+            comments={comments}
+            ideaId={ideaId}
+            currentUserId={currentUserId}
+            onRefresh={() => loadComments(true)}
+            blockedIds={blockedIds}
+            onBlock={handleBlock}
+          />
         </>
       )}
     </div>

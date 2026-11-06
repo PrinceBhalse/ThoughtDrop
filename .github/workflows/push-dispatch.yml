@@ -1,0 +1,34 @@
+name: Push dispatch
+
+# Delivers pending native notifications every 10 minutes. Free alternative to a
+# Vercel Pro cron (Hobby crons run once a day only).
+#
+# Repo setup:
+#   Settings -> Secrets and variables -> Actions
+#     Secret  CRON_SECRET  = same value as the deployment
+#     Variable SITE_URL    = https://your-domain (optional, defaults below)
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+
+jobs:
+  dispatch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Dispatch pending notifications
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          SITE_URL: ${{ vars.SITE_URL }}
+        run: |
+          set -euo pipefail
+          if [ -z "${CRON_SECRET:-}" ]; then
+            echo "CRON_SECRET is not set; skipping."
+            exit 0
+          fi
+          BASE="${SITE_URL:-https://thoughtdrop.app}"
+          curl --fail --silent --show-error --max-time 30 \
+            -H "Authorization: Bearer ${CRON_SECRET}" \
+            "${BASE%/}/api/push/dispatch"
+          echo
