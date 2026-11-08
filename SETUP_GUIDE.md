@@ -93,9 +93,10 @@ to upgrade the legacy `comments` table in place (adds `author_id`, `parent_id`,
 
 1. Left sidebar → **Authentication**.
 2. Open **URL Configuration**.
-   - **Site URL:** `https://thoughtdrop.app`
-   - Under **Redirect URLs** click **Add URL** twice, adding exactly:
-     - `https://thoughtdrop.app/auth/callback`
+   - **Site URL:** `https://thought-drop-eight.vercel.app`
+   - Under **Redirect URLs** click **Add URL** three times, adding exactly:
+     - `https://thought-drop-eight.vercel.app/auth/callback`
+     - `https://thoughtdrop.app/auth/callback` (for later, if you attach the custom domain)
      - `com.thoughtdrop.app://login-callback`
    - **Save.**
 3. Still under **Authentication** → **Providers** (or Sign In / Providers):
@@ -138,31 +139,53 @@ set up on this machine.)
    | `NEXT_PUBLIC_SUPABASE_URL` | Project URL from 1c |
    | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | anon key from 1c |
    | `SUPABASE_SERVICE_ROLE_KEY` | service_role key from 1c |
-   | `NEXT_PUBLIC_SITE_URL` | `https://thoughtdrop.app` |
+   | `NEXT_PUBLIC_SITE_URL` | `https://thought-drop-eight.vercel.app` (until you attach the custom domain — see §2c) |
    | `ADMIN_EMAILS` | your email |
 
 5. **Deploy**. Wait ~2–3 minutes. On **Congratulations**, click the preview URL
    (`…-princeb.vercel.app`). The ThoughtDrop home page should load; sign up and post a
    test idea there. If it works, the deploy is healthy.
 
-### 2c. Attach thoughtdrop.app
+### 2c. Optional: attach a custom domain (SKIP for now — launch works without it)
 
-The site is hosted by Cloudflare but has no working server behind it (that is the **525**
-error you get today).
+> **Updated Nov 2026:** the site is fully live at
+> `https://thought-drop-eight.vercel.app` (all 7 health checks pass). The app now
+> launches on that URL and `thoughtdrop.app` is **not required** for the Play Store
+> submission — the Play listing accepts any working URL. Do this section only after
+> the app is validated with real testers.
 
-1. Vercel → Settings → **Domains** → type `thoughtdrop.app` → **Add**.
-2. Vercel shows the DNS records it wants — usually `CNAME` → `cname.vercel-dns.com`.
-3. Open Cloudflare: `https://dash.cloudflare.com` → click `thoughtdrop.app` →
-   **DNS → Records** → **Add record**:
-   - Type `CNAME`, Name `@`, Target = the record Vercel showed you
-   - **Proxy status: click the orange cloud until it is grey** (DNS only — simplest)
-4. (Optional) Same for `www`.
-5. Cloudflare → **SSL/TLS → Overview** → **Full (strict)**.
-6. Wait 5–10 minutes. Then:
+**First, the mystery of thoughtdrop.app:** it IS registered — at Cloudflare
+Registrar, registered 2025-08-20, expires 2027-08-20. It currently returns error
+525 (registered + parked, no origin). Log in to `https://dash.cloudflare.com` with
+your usual email:
+
+- **If you see `thoughtdrop.app` in your dashboard** → you bought it and forgot →
+  you own it. In that dashboard: **DNS → Records → Add record**: type `CNAME`,
+  name `@`, target `cname.vercel-dns.com`, **proxy = grey cloud (DNS only)**.
+  Then add `thoughtdrop.app` in Vercel → Settings → Domains. 5 minutes, done.
+  (That grey-cloud CNAME is exactly what removes the 525.)
+- **If you do NOT see it** → someone else owns it until Aug 2027. Launch on the
+  Vercel URL, and if/when you want a custom brand domain, buy any name you're
+  sure of directly in Cloudflare (**Domain Registration → Register Domain**) —
+  Cloudflare Registrar is at-cost pricing, and its DNS is already there.
+
+**Whenever a custom domain is attached, do these two updates (in this order):**
+
+1. Change `NEXT_PUBLIC_SITE_URL` to the new domain in:
+   - Vercel → Settings → Environment Variables → **Redeploy** after saving
+   - `D:\ThoughtDrop\.env.local` (line 4)
+   - `D:\ThoughtDrop\capacitor-web\index.html` (`APP_URL`)
+2. Supabase → Authentication → URL Configuration:
+   - **Site URL:** `https://<new-domain>`
+   - **Redirect URLs:** `https://<new-domain>/auth/callback`,
+     `com.thoughtdrop.app://login-callback`
+3. Verify, then rebuild the APK/AAB:
 
 ```powershell
 cd D:\ThoughtDrop
-npm run check:deploy -- https://thoughtdrop.app
+npm run check:deploy -- https://<new-domain>
+npm run android:sync
+npm run android:aab
 ```
 
 All seven checks must say **PASS**. If one fails, paste me the output.

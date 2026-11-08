@@ -31,14 +31,14 @@
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="https" android:host="thoughtdrop.app" android:pathPrefix="/idea/" />
+                <data android:scheme="https" android:host="thought-drop-eight.vercel.app" android:pathPrefix="/idea/" />
             </intent-filter>
 
             <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="https" android:host="thoughtdrop.app" android:pathPrefix="/profile/" />
+                <data android:scheme="https" android:host="thought-drop-eight.vercel.app" android:pathPrefix="/profile/" />
             </intent-filter>
 
             <!-- OAuth return deep link (com.thoughtdrop.app://login-callback?code=...).
