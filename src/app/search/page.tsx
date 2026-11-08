@@ -5,6 +5,21 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Search, Hash, TrendingUp, Loader2 } from "lucide-react";
 
+export const dynamic = "force-dynamic";
+
+interface Idea {
+  id: string;
+  title: string;
+  category: string;
+  status: string;
+  username?: string;
+}
+
+interface Community {
+  id: string;
+  name: string;
+}
+
 export default function SearchDiscoveryPage() {
   const [query, setQuery] = useState<string>("");
   const [loading, setLoading] = useState(false);
@@ -28,6 +43,7 @@ export default function SearchDiscoveryPage() {
     }
     setIdeas([]);
     setCommunities([]);
+    setLoading(true);
     try {
       const res = await fetch(`/api/search?q=${encodeURIComponent(q)}&limit=12`);
       const data = await res.json();
@@ -37,6 +53,8 @@ export default function SearchDiscoveryPage() {
     } catch {
       setIdeas([]);
       setCommunities([]);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -93,7 +111,7 @@ export default function SearchDiscoveryPage() {
             </div>
           ) : ideas.length === 0 && communities.length === 0 ? (
             <div className="py-12 text-center text-muted-foreground">
-              No results for &ldquo;{query}&rdquo;
+              No results for &ldquo;ldquo;{query}&rdquo;rdquo;
             </div>
           ) : (
             <div className="grid gap-4">
