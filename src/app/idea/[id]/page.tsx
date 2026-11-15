@@ -7,6 +7,7 @@ import ShareButton from '@/components/ShareButton'
 import ReportButton from '@/components/ReportButton'
 import UpvoteButton from '@/components/UpvoteButton'
 import Comments from '@/components/Comments'
+import SimilarIdeas from '@/components/SimilarIdeas'
 import { isAdminEmail } from '@/lib/admin'
 
 export const dynamic = 'force-dynamic';
@@ -241,6 +242,9 @@ export default async function IdeaDetailPage({ params }: IdeaPageProps) {
           </div>
         )}
       </div>
+
+      {/* More like this (Batch B) */}
+      <SimilarIdeas ideaId={idea.id} />
 
       {/* Discussion Section */}
       <div className="glass-panel p-8">

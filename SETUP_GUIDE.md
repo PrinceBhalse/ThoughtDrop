@@ -188,7 +188,7 @@ npm run android:sync
 npm run android:aab
 ```
 
-All checks must say **PASS** — 9 HTTP routes plus 2 schema checks
+All checks must say **PASS** — 10 HTTP routes plus 2 schema checks
 (`feed_events`, `session_intents`). A schema failure means
 `supabase/migrations/0015_feed_signals.sql` has not been applied yet; paste it
 into the Supabase SQL Editor and re-run. If any other check fails, paste me the

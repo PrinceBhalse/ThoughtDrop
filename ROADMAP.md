@@ -278,12 +278,21 @@ GDPR both treat behavioural profiles as personal data.
 6. ✅ Consent + deletion: toggle in Profile → Edit profile; account deletion wipes
    `feed_events` and `session_intents`; privacy policy + Play Data Safety updated.
 
-**Batch B — "Similarity" (2–3 weeks):**
-6. `0016_content_embeddings.sql` (pgvector) + backfill job for existing ideas;
-   incremental embedding on idea create/update.
-7. Similar-idea endpoint ("More like this" on idea page) + "Because you follow X" rows.
-8. Friend suggestions v1: score = shared communities/topics + mutual follows +
-   recency/activity, exposed in a `People you may know` module. No auto-follow.
+**Batch B — "Similarity" (2–3 weeks): SHIPPED (except embeddings) Nov 2026**
+6. ⏳ `0016_content_embeddings.sql` (pgvector) + backfill job for existing ideas;
+   incremental embedding on idea create/update. **Blocked:** needs an embedding
+   provider key (OpenAI/Voyage/etc.) and a service-role key to backfill. The
+   similarity surface below ships without it, so this only upgrades quality.
+7. ✅ Similar-idea endpoint ("More like this" on the idea page): same category +
+   same community + shared upvoters, ranked on the feed's recency/quality curve.
+   `src/lib/discovery.ts` → `getSimilarIdeas`, rendered by
+   `src/components/SimilarIdeas.tsx`. "Because you follow X" rows already ship as
+   the `following` reason chip in Batch A.
+8. ✅ Friend suggestions v1: score = mutual follows ×2 + ideas in your categories
+   ×1 + recent activity ×0.3, exposed as `People you may know` on the home feed
+   (`/api/people/suggest`). Excludes yourself, people you already follow, and
+   blocked users. No auto-follow — every card has a normal follow button, and the
+   module is dismissible per session.
 
 **Batch C — "Daily loops" (Drops, DMs):** Phase 2 features (whispers 1:1 → groups)
 after A/B are measured. Ranking upgrades to Thompson sampling bandit once A provides

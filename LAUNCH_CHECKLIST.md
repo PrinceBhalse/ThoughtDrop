@@ -93,7 +93,7 @@ terms_accepted_at recorded at signup.
    npm run check:deploy -- https://thoughtdrop.app
    ```
 
-   Must end with `All checks passed`. The run covers 9 HTTP routes plus 2 schema
+   Must end with `All checks passed`. The run covers 10 HTTP routes plus 2 schema
    checks (`feed_events`, `session_intents`). If a schema check fails, apply
    `supabase/migrations/0015_feed_signals.sql` before continuing. If any other
    check fails, fix that one first.

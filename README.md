@@ -91,6 +91,10 @@ Open [http://localhost:3000](http://localhost:3000).
 - **Full-text search** across ideas and communities (`/api/search`)
 - **Infinite scroll** feed with cursor-based pagination (`/api/feed`)
 - **Trending / newest / top** sorting with time-decay ranking
+- **For You** ranking with session intents, a 70/30 personalized/surprise split,
+  per-card "why this" labels, and "show me less" suppression (`/api/feed`)
+- **People you may know** from mutual follows, shared topics and recent activity
+  (`/api/people/suggest`), plus **More like this** on every idea page
 - **Public creator profiles** (`/profile/[username>`)
 - **Dark / light theme** with system detection
 - **Dynamic OG images** for social sharing (1200x630 cards)

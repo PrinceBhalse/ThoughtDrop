@@ -3,18 +3,24 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/components/ui/Toast";
-import { trackEvent } from "@/lib/events";
+import { trackEvent, type FeedSurface } from "@/lib/events";
 
 interface FollowButtonProps {
   targetId: string;
   initialFollowing: boolean;
   initialFollowers: number;
+  /** Hide the follower count (used by compact discovery cards). */
+  showCount?: boolean;
+  /** Where the button lives, for feed-signal attribution. */
+  surface?: FeedSurface;
 }
 
 export default function FollowButton({
   targetId,
   initialFollowing,
   initialFollowers,
+  showCount = true,
+  surface = "profile",
 }: FollowButtonProps) {
   const { toast } = useToast();
   const router = useRouter();
@@ -53,7 +59,7 @@ export default function FollowButton({
 
       trackEvent({
         eventType: data.following ? "follow" : "unfollow",
-        surface: "profile",
+        surface,
         metadata: { authorId: targetId },
       });
 
@@ -80,7 +86,9 @@ export default function FollowButton({
       >
         {following ? "Following" : "Follow"}
       </button>
-      <span className="text-sm text-muted-foreground">{followers} followers</span>
+      {showCount && (
+        <span className="text-sm text-muted-foreground">{followers} followers</span>
+      )}
     </div>
   );
 }

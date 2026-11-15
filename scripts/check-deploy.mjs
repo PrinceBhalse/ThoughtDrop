@@ -38,6 +38,7 @@ const checks = [
   { path: "/api/feed?limit=1", name: "feed API", expect: 200, json: true },
   { path: "/api/events", name: "signal ingestion route", expect: 405 },
   { path: "/api/intent", name: "session intent route", expect: 405 },
+  { path: "/api/people/suggest", name: "people suggestions", expect: 200, json: true },
   { path: "/login", name: "sign-in page", expect: 200 },
   { path: "/privacy", name: "privacy policy", expect: 200 },
   { path: "/terms", name: "terms", expect: 200 },

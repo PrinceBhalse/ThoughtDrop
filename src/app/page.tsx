@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import IdeaFeed from '@/components/IdeaFeed'
 import EmptyState from '@/components/EmptyState'
+import PeopleYouMayKnow from '@/components/PeopleYouMayKnow'
 import SessionIntentPrompt, { readStoredIntent, type SessionIntent } from '@/components/SessionIntentPrompt'
 import { type Idea } from '@/components/IdeaCard'
 import { Coins } from 'lucide-react'
@@ -145,6 +146,9 @@ export default function Home() {
           </select>
         </div>
       </div>
+
+      {/* People you may know (Batch B) — signed-in only, dismissible */}
+      <PeopleYouMayKnow enabled={isAuthenticated} />
 
       {/* Feed Grid */}
       {error ? (
