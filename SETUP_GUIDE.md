@@ -188,9 +188,13 @@ npm run android:sync
 npm run android:aab
 ```
 
-All seven checks must say **PASS**. If one fails, paste me the output.
+All checks must say **PASS** — 9 HTTP routes plus 2 schema checks
+(`feed_events`, `session_intents`). A schema failure means
+`supabase/migrations/0015_feed_signals.sql` has not been applied yet; paste it
+into the Supabase SQL Editor and re-run. If any other check fails, paste me the
+output.
 
-**Done when:** seven PASS lines and a working `.vercel.app` site.
+**Done when:** every line reads PASS and the `.vercel.app` site works.
 
 ---
 
