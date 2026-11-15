@@ -174,6 +174,7 @@ export default async function PublicProfilePage({ params }: PublicProfilePagePro
               idea={idea as Idea}
               userAge={21}
               isAuthenticated={!!user}
+              surface="profile"
             />
           ))
         ) : (

@@ -160,10 +160,12 @@ export default async function IdeaDetailPage({ params }: IdeaPageProps) {
           <div className="flex-1" />
           
           <div className="flex items-center gap-3">
-            <UpvoteButton ideaId={idea.id} initialCount={idea.upvotes_count} />
+            <UpvoteButton ideaId={idea.id} initialCount={idea.upvotes_count} surface="idea" />
             <ShareButton
               title={idea.title}
               url={`${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/idea/${idea.id}`}
+              ideaId={idea.id}
+              surface="idea"
             />
             {user && idea.user_id === user.id && (
               <Link href={`/idea/${idea.id}/edit`} className="glass-button">

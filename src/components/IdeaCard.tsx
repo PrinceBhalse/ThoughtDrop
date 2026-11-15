@@ -1,11 +1,24 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import { motion } from "framer-motion";
-import { MessageSquare, Lock, ShieldAlert, GitFork } from "lucide-react";
+import {
+  MessageSquare,
+  Lock,
+  ShieldAlert,
+  GitFork,
+  Users,
+  TrendingUp,
+  Clock,
+  Sparkles,
+  EyeOff,
+  Award,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 import UpvoteButton from "./UpvoteButton";
 import BookmarkButton from "./BookmarkButton";
+import { trackEvent, type FeedSurface } from "@/lib/events";
 
 export type Idea = {
   id: string;
@@ -26,6 +39,8 @@ export type Idea = {
   profiles?: {
     username: string;
   };
+  /** Why this idea was ranked into the feed (added by /api/feed). */
+  reason?: string;
 };
 
 interface IdeaCardProps {
@@ -33,9 +48,31 @@ interface IdeaCardProps {
   userAge?: number | null;
   isAuthenticated: boolean;
   hasSignedNda?: boolean;
+  /** Where this card is rendered; used for feed signal attribution. */
+  surface?: FeedSurface;
+  /** Called when the reader taps "show me less". */
+  onShowLess?: (idea: Idea) => void;
 }
 
-export default function IdeaCard({ idea, userAge, isAuthenticated, hasSignedNda }: IdeaCardProps) {
+const REASON_META: Record<
+  string,
+  { label: string; icon: typeof Users }
+> = {
+  following: { label: "Because you follow them", icon: Users },
+  trending: { label: "Trending now", icon: TrendingUp },
+  top: { label: "Top voted", icon: Award },
+  new: { label: "Just posted", icon: Clock },
+  surprise: { label: "Outside your usual", icon: Sparkles },
+};
+
+export default function IdeaCard({
+  idea,
+  userAge,
+  isAuthenticated,
+  hasSignedNda,
+  surface = "home",
+  onShowLess,
+}: IdeaCardProps) {
   const isAdultRestricted = idea.is_adult && (!isAuthenticated || (userAge !== null && userAge !== undefined && userAge < 18));
   const isNdaRestricted = idea.is_nda_protected && !hasSignedNda;
 
@@ -43,8 +80,91 @@ export default function IdeaCard({ idea, userAge, isAuthenticated, hasSignedNda 
 
   const canInteract = !isAdultRestricted && !isNdaRestricted;
 
+  // ---------------------------------------------------------------
+  // Impression + dwell signals (Batch A). One impression per mount when
+  // at least half the card is on screen; dwell is accumulated while
+  // visible and flushed when the card leaves the viewport or unmounts.
+  // ---------------------------------------------------------------
+  const cardRef = useRef<HTMLDivElement | null>(null);
+  const visibleSince = useRef<number | null>(null);
+  const dwellAccum = useRef(0);
+  const impressionSent = useRef(false);
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    const el = cardRef.current;
+    if (!el) return;
+
+    const flushDwell = () => {
+      if (dwellAccum.current >= 400) {
+        trackEvent({
+          ideaId: idea.id,
+          eventType: "dwell",
+          surface,
+          dwellMs: Math.min(dwellAccum.current, 600_000),
+          metadata: { reason: idea.reason ?? null },
+        });
+      }
+      dwellAccum.current = 0;
+    };
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting && entry.intersectionRatio >= 0.5) {
+            if (visibleSince.current === null) visibleSince.current = Date.now();
+            if (!impressionSent.current) {
+              impressionSent.current = true;
+              trackEvent({
+                ideaId: idea.id,
+                eventType: "impression",
+                surface,
+                metadata: {
+                  reason: idea.reason ?? null,
+                  authorId: idea.user_id ?? null,
+                },
+              });
+            }
+          } else if (visibleSince.current !== null) {
+            dwellAccum.current += Date.now() - visibleSince.current;
+            visibleSince.current = null;
+          }
+        }
+      },
+      { threshold: [0, 0.5, 1] }
+    );
+
+    observer.observe(el);
+    return () => {
+      observer.disconnect();
+      if (visibleSince.current !== null) {
+        dwellAccum.current += Date.now() - visibleSince.current;
+        visibleSince.current = null;
+      }
+      flushDwell();
+    };
+  }, [idea.id, idea.reason, idea.user_id, isAuthenticated, surface]);
+
+  const handleShowLess = () => {
+    trackEvent({
+      ideaId: idea.id,
+      eventType: "show_less",
+      surface,
+      metadata: {
+        reason: idea.reason ?? null,
+        authorId: idea.user_id ?? null,
+        category: idea.category,
+      },
+    });
+    onShowLess?.(idea);
+  };
+
+  const reasonMeta = idea.reason ? REASON_META[idea.reason] : undefined;
+  const ReasonIcon = reasonMeta?.icon;
+
   return (
     <motion.div
+      ref={cardRef}
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
@@ -117,7 +237,18 @@ export default function IdeaCard({ idea, userAge, isAuthenticated, hasSignedNda 
           </span>
         </div>
 
-        <Link href={`/idea/${idea.id}`} className="block group/title">
+        <Link
+          href={`/idea/${idea.id}`}
+          className="block group/title"
+          onClick={() =>
+            trackEvent({
+              ideaId: idea.id,
+              eventType: "click",
+              surface,
+              metadata: { reason: idea.reason ?? null },
+            })
+          }
+        >
           <h2 className="text-2xl font-bold mb-3 tracking-tight group-hover/title:text-primary transition-colors">
             {idea.title}
           </h2>
@@ -127,10 +258,17 @@ export default function IdeaCard({ idea, userAge, isAuthenticated, hasSignedNda 
           {contentSnippet}
         </p>
 
+        {isAuthenticated && reasonMeta && ReasonIcon && (
+          <div className="mb-3 flex items-center gap-1.5 text-[11px] uppercase tracking-wider text-muted-foreground/70">
+            <ReasonIcon className="w-3 h-3" aria-hidden />
+            <span>{reasonMeta.label}</span>
+          </div>
+        )}
+
         <div className="flex items-center justify-between pt-4 border-t border-white/10 mt-auto">
           <div className="flex items-center gap-4">
-            <UpvoteButton ideaId={idea.id} initialCount={idea.upvotes_count} />
-            <BookmarkButton ideaId={idea.id} />
+            <UpvoteButton ideaId={idea.id} initialCount={idea.upvotes_count} surface={surface} />
+            <BookmarkButton ideaId={idea.id} surface={surface} />
             <Link href={`/idea/${idea.id}`} className="flex items-center gap-1.5 text-muted-foreground hover:text-white transition-colors">
               <div className="p-1.5 rounded-full bg-white/5">
                 <MessageSquare className="w-4 h-4" />
@@ -143,9 +281,22 @@ export default function IdeaCard({ idea, userAge, isAuthenticated, hasSignedNda 
               </Link>
             )}
           </div>
-          <Link href={`/create?parentId=${idea.id}`} className="text-xs font-medium text-muted-foreground hover:text-primary flex items-center gap-1 transition-colors">
-            <GitFork className="w-3 h-3" /> Fork
-          </Link>
+          <div className="flex items-center gap-3">
+            <Link href={`/create?parentId=${idea.id}`} className="text-xs font-medium text-muted-foreground hover:text-primary flex items-center gap-1 transition-colors">
+              <GitFork className="w-3 h-3" /> Fork
+            </Link>
+            {isAuthenticated && (
+              <button
+                type="button"
+                onClick={handleShowLess}
+                title="Show me less like this"
+                aria-label="Show me less like this"
+                className="p-1.5 rounded-full text-muted-foreground/60 transition-colors hover:bg-white/10 hover:text-foreground"
+              >
+                <EyeOff className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
         </div>
       </div>
     </motion.div>

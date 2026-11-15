@@ -86,6 +86,7 @@ export default async function CommunityPage({ params }: { params: Promise<{ comm
                 idea={idea} 
                 userAge={userAge} 
                 isAuthenticated={!!user} 
+                surface="community"
               />
             ))
           )}

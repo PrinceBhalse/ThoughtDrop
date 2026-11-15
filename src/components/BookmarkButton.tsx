@@ -4,14 +4,16 @@ import { useState } from "react";
 import { Bookmark, BookmarkCheck } from "lucide-react";
 import { useToast } from "@/components/ui/Toast";
 import { toggleBookmark } from "@/app/bookmarks/actions";
+import { trackEvent, type FeedSurface } from "@/lib/events";
 
 interface BookmarkButtonProps {
   ideaId: string;
   initialBookmarked?: boolean;
   className?: string;
+  surface?: FeedSurface;
 }
 
-export default function BookmarkButton({ ideaId, initialBookmarked = false, className = "" }: BookmarkButtonProps) {
+export default function BookmarkButton({ ideaId, initialBookmarked = false, className = "", surface = "home" }: BookmarkButtonProps) {
   const [bookmarked, setBookmarked] = useState(initialBookmarked);
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
@@ -25,6 +27,11 @@ export default function BookmarkButton({ ideaId, initialBookmarked = false, clas
       toast(result.replace(/^error:/, "") || "Failed", "error");
     } else {
       setBookmarked(result.bookmarked);
+      trackEvent({
+        ideaId,
+        eventType: result.bookmarked ? "save" : "unsave",
+        surface,
+      });
       toast(result.bookmarked ? "Saved to bookmarks" : "Removed from bookmarks", "success");
     }
   };

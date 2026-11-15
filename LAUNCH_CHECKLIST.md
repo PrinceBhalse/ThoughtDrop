@@ -35,7 +35,7 @@ region (e.g. Mumbai) and run **all** migrations, starting from `0000`:
    0007_comments.sql  0008_bookmarks.sql  0009_follows.sql
    0010_notifications.sql  0011_push_tokens.sql
    0012_idea_media_storage.sql  0013_notification_events.sql
-   0014_user_safety.sql
+   0014_user_safety.sql  0015_feed_signals.sql
    ```
 
    After each paste, press **RUN**. If it errors with "already exists", skip that file and

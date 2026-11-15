@@ -66,6 +66,7 @@ supabase/migrations/
   0012_idea_media_storage.sql
   0013_notification_events.sql
   0014_user_safety.sql
+  0015_feed_signals.sql
 ```
 
 Each migration is idempotent (`IF NOT EXISTS`, `IF EXISTS`) so safe to re-run.
@@ -223,6 +224,7 @@ Vercel sends `Authorization: Bearer $CRON_SECRET` automatically when `CRON_SECRE
 | `0012` | `idea-media` storage bucket + RLS policies |
 | `0013` | Notification event triggers, forks, live counters |
 | `0014` | User blocks, user reports, terms acceptance, block-filtered notifications |
+| `0015` | Feed signals, session intent, personalization consent |
 
 ## License
 

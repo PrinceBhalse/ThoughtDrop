@@ -12,7 +12,16 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Generated Android build output and Capacitor assets.
+    "android/**",
   ]),
+  {
+    // Node build scripts are CommonJS by design (run directly with `node`).
+    files: ["scripts/**/*.js"],
+    rules: {
+      "@typescript-eslint/no-require-imports": "off",
+    },
+  },
 ]);
 
 export default eslintConfig;

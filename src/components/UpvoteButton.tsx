@@ -6,6 +6,7 @@ import { ArrowUp } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { isNative } from "@/lib/native";
 import { toggleUpvote } from "@/app/actions/upvote";
+import { trackEvent, type FeedSurface } from "@/lib/events";
 
 function haptic() {
   if (!isNative()) return;
@@ -20,10 +21,12 @@ export default function UpvoteButton({
   ideaId,
   initialCount,
   className,
+  surface = "home",
 }: {
   ideaId: string;
   initialCount: number;
   className?: string;
+  surface?: FeedSurface;
 }) {
   const router = useRouter();
   const [count, setCount] = useState(initialCount);
@@ -36,6 +39,7 @@ export default function UpvoteButton({
     const willUpvote = !upvoted;
     setUpvoted(willUpvote);
     setCount((c) => Math.max(0, c + (willUpvote ? 1 : -1)));
+    trackEvent({ ideaId, eventType: willUpvote ? "like" : "unlike", surface });
 
     startTransition(async () => {
       const result = await toggleUpvote(ideaId, count);

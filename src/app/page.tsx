@@ -3,53 +3,78 @@
 import { useState, useEffect } from "react";
 import IdeaFeed from '@/components/IdeaFeed'
 import EmptyState from '@/components/EmptyState'
+import SessionIntentPrompt, { readStoredIntent, type SessionIntent } from '@/components/SessionIntentPrompt'
 import { type Idea } from '@/components/IdeaCard'
 import { Coins } from 'lucide-react'
 
 export default function Home() {
   const [category, setCategory] = useState("All")
-  const [sort, setSort] = useState("newest")
+  const [sort, setSort] = useState("foryou")
+  // Lazy init reads sessionStorage once on the client; SSR returns null.
+  const [intent, setIntent] = useState<SessionIntent | null>(() => readStoredIntent())
   const [initialIdeas, setInitialIdeas] = useState<Idea[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [userAge, setUserAge] = useState<number | null>(null)
   const [isAuthenticated, setIsAuthenticated] = useState(false)
 
-  // Load initial data and user session
+  // The intent prompt dispatches this after the reader picks a mood.
   useEffect(() => {
-    const loadInitial = async () => {
+    const handler = (event: Event) => {
+      const detail = (event as CustomEvent).detail
+      if (detail === "distract" || detail === "inspire" || detail === "catchup" || detail === "learn") {
+        setIntent(detail)
+      }
+    }
+    window.addEventListener("td:intent", handler)
+    return () => window.removeEventListener("td:intent", handler)
+  }, [])
+
+  // Resolve the session first, then load the feed so the first request is
+  // already personalized for signed-in readers.
+  useEffect(() => {
+    let cancelled = false
+
+    const load = async () => {
       try {
-        const res = await fetch(`/api/feed?category=${encodeURIComponent(category)}&sort=${encodeURIComponent(sort)}&limit=15`)
+        const { createClient } = await import('@/utils/supabase/client')
+        const supabase = createClient()
+        const { data: { user } } = await supabase.auth.getUser()
+        if (cancelled) return
+
+        setIsAuthenticated(!!user)
+        if (user) {
+          const { data: profile } = await supabase
+            .from('users')
+            .select('date_of_birth')
+            .eq('id', user.id)
+            .single()
+          if (!cancelled && profile?.date_of_birth) {
+            setUserAge(new Date().getFullYear() - new Date(profile.date_of_birth).getFullYear())
+          }
+        }
+
+        const params = new URLSearchParams({ category, sort, limit: '15' })
+        if (intent) params.set('intent', intent)
+
+        const res = await fetch(`/api/feed?${params.toString()}`)
         const data = await res.json()
+        if (cancelled) return
         if (data.error) throw new Error(data.error)
         setInitialIdeas(data.ideas || [])
+        setError(null)
       } catch (e) {
-        setError(e instanceof Error ? e.message : "Failed to load")
+        if (!cancelled) setError(e instanceof Error ? e.message : "Failed to load")
       } finally {
-        setLoading(false)
+        if (!cancelled) setLoading(false)
       }
     }
-    loadInitial()
 
-    // Check auth for age
-    const checkAuth = async () => {
-      const { createClient } = await import('@/utils/supabase/client')
-      const supabase = createClient()
-      const { data: { user } } = await supabase.auth.getUser()
-      setIsAuthenticated(!!user)
-      if (user) {
-        const { data: profile } = await supabase
-          .from('users')
-          .select('date_of_birth')
-          .eq('id', user.id)
-          .single()
-        if (profile?.date_of_birth) {
-          setUserAge(new Date().getFullYear() - new Date(profile.date_of_birth).getFullYear())
-        }
-      }
+    void load()
+    return () => {
+      cancelled = true
     }
-    checkAuth()
-  }, [category, sort])
+  }, [category, sort, intent])
 
   if (loading) {
     return (
@@ -74,6 +99,8 @@ export default function Home() {
 
   return (
     <div className="flex flex-col gap-8">
+      <SessionIntentPrompt enabled={isAuthenticated} />
+
       {/* Header Section */}
       <section className="text-center space-y-6 py-12">
         <h1 className="text-5xl md:text-7xl font-extrabold tracking-tighter bg-clip-text text-transparent bg-gradient-to-r from-white via-white to-white/50">
@@ -110,6 +137,7 @@ export default function Home() {
             onChange={(e) => setSort(e.target.value)}
             className="bg-secondary/50 border border-white/10 rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
           >
+            <option value="foryou">For You</option>
             <option value="trending">Trending</option>
             <option value="newest">Newest</option>
             <option value="top">Top Voted</option>
@@ -125,11 +153,14 @@ export default function Home() {
         </div>
       ) : initialIdeas && initialIdeas.length > 0 ? (
         <IdeaFeed
+          key={`${category}-${sort}-${intent ?? 'none'}`}
           initialIdeas={initialIdeas}
           userAge={userAge}
           isAuthenticated={isAuthenticated}
           category={category}
           sort={sort}
+          intent={intent}
+          surface="home"
         />
       ) : (
         <EmptyState

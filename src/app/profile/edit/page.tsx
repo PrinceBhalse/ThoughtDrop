@@ -7,13 +7,15 @@ import { ArrowLeft, Loader2, User, Trash2 } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
 import { useToast } from "@/components/ui/Toast";
 import LegalLinks from "@/components/LegalLinks";
-import { updateProfile } from "./actions";
+import { cn } from "@/lib/utils";
+import { updateProfile, setPersonalization } from "./actions";
 
 interface Profile {
   id: string;
   username: string | null;
   bio: string | null;
   website: string | null;
+  consent_personalization?: boolean;
 }
 
 export default function EditProfilePage() {
@@ -22,6 +24,8 @@ export default function EditProfilePage() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [personalize, setPersonalize] = useState(true);
+  const [savingPref, setSavingPref] = useState(false);
 
   useEffect(() => {
     const load = async () => {
@@ -33,14 +37,30 @@ export default function EditProfilePage() {
       }
       const { data } = await supabase
         .from("users")
-        .select("id, username, bio, website")
+        .select("id, username, bio, website, consent_personalization")
         .eq("id", user.id)
         .single();
       setProfile(data);
+      if (data?.consent_personalization === false) setPersonalize(false);
       setLoading(false);
     };
     load();
   }, [router]);
+
+  const togglePersonalization = async () => {
+    if (savingPref) return;
+    const next = !personalize;
+    setPersonalize(next);
+    setSavingPref(true);
+    const result = await setPersonalization(next);
+    setSavingPref(false);
+    if (result === "ok") {
+      toast(next ? "Personalized feed on" : "Personalized feed off", "success");
+    } else {
+      setPersonalize(!next);
+      toast(result.replace(/^error:/, "") || "Failed to update", "error");
+    }
+  };
 
   if (loading) {
     return (
@@ -164,6 +184,38 @@ export default function EditProfilePage() {
           </button>
         </div>
       </form>
+
+      <section className="glass-panel p-6">
+        <div className="flex items-start justify-between gap-4">
+          <div className="min-w-0">
+            <h2 className="font-semibold">Personalized feed</h2>
+            <p className="text-sm text-muted-foreground mt-1">
+              Use your activity — what you open, how long you read, and &ldquo;show me less&rdquo;
+              choices — to rank For You. Turn it off and the feed falls back to recency and
+              popularity.
+            </p>
+          </div>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={personalize}
+            aria-label="Personalized feed"
+            disabled={savingPref}
+            onClick={togglePersonalization}
+            className={cn(
+              "relative mt-1 h-6 w-11 shrink-0 rounded-full border transition-colors disabled:opacity-60",
+              personalize ? "bg-primary border-primary" : "bg-white/10 border-white/15"
+            )}
+          >
+            <span
+              className={cn(
+                "absolute top-1/2 h-[18px] w-[18px] -translate-y-1/2 rounded-full bg-white transition-transform",
+                personalize ? "translate-x-[22px]" : "translate-x-[2px]"
+              )}
+            />
+          </button>
+        </div>
+      </section>
 
       <section className="glass-panel p-6 space-y-4">
         <div>

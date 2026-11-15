@@ -41,3 +41,25 @@ export async function updateProfile(formData: FormData): Promise<string> {
   revalidatePath('/profile/edit')
   return 'ok'
 }
+
+/**
+ * Personalization consent (migration 0015). When false the For You feed
+ * ignores behavioural signals and falls back to recency + popularity.
+ */
+export async function setPersonalization(enabled: boolean): Promise<string> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  if (!user) redirect('/login')
+
+  const { error } = await supabase
+    .from('users')
+    .update({ consent_personalization: enabled })
+    .eq('id', user.id)
+
+  if (error) return `error:${error.message}`
+
+  revalidatePath('/')
+  revalidatePath('/profile/edit')
+  return 'ok'
+}

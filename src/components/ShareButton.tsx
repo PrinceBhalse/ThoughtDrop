@@ -4,15 +4,23 @@ import { useState } from "react";
 import { Share2, Check } from "lucide-react";
 import { useToast } from "@/components/ui/Toast";
 import { isNative } from "@/lib/native";
+import { trackEvent, type FeedSurface } from "@/lib/events";
 
 interface ShareButtonProps {
   title: string;
   url: string;
+  ideaId?: string;
+  surface?: FeedSurface;
 }
 
-export default function ShareButton({ title, url }: ShareButtonProps) {
+export default function ShareButton({ title, url, ideaId, surface = "idea" }: ShareButtonProps) {
   const { toast } = useToast();
   const [copied, setCopied] = useState(false);
+
+  const trackShare = () => {
+    if (!ideaId) return;
+    trackEvent({ ideaId, eventType: "share", surface });
+  };
 
   const handleShare = async () => {
     // Native apps get the Android share sheet (WhatsApp, X, Gmail, ...).
@@ -20,6 +28,7 @@ export default function ShareButton({ title, url }: ShareButtonProps) {
       try {
         const { Share } = await import("@capacitor/share");
         await Share.share({ title, text: title, url, dialogTitle: "Share this idea" });
+        trackShare();
         return;
       } catch {
         // Fall through to the web share / clipboard path.
@@ -29,6 +38,7 @@ export default function ShareButton({ title, url }: ShareButtonProps) {
     if (navigator.share) {
       try {
         await navigator.share({ title, url });
+        trackShare();
         return;
       } catch {
         // User cancelled — fall through to clipboard.
@@ -40,6 +50,7 @@ export default function ShareButton({ title, url }: ShareButtonProps) {
       const tracked = `${url}${separator}ref=share_link`;
       await navigator.clipboard.writeText(tracked);
       setCopied(true);
+      trackShare();
       toast("Link copied to clipboard", "success");
       setTimeout(() => setCopied(false), 2000);
     } catch {

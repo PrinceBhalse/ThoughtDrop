@@ -111,7 +111,8 @@ Supabase Dashboard → SQL Editor, run in order (skip any already applied):
 `0005_upvotes_search_crud.sql` → `0006_profile_fields.sql` → `0007_comments.sql` →
 `0008_bookmarks.sql` → `0009_follows.sql` → `0010_notifications.sql` →
 `0011_push_tokens.sql` → `0012_idea_media_storage.sql` →
-`0013_notification_events.sql` → `0014_user_safety.sql`
+`0013_notification_events.sql` → `0014_user_safety.sql` →
+`0015_feed_signals.sql`
 
 On a fresh project, all of them (a fresh DB has none). Only the tail is needed if your
 existing project already has the early ones.
@@ -206,7 +207,9 @@ time from Settings.
 - Collects: *Email address* (account management, app functionality), *User IDs*
   (account management), *Name / username* (app functionality, public), *Photos*
   (app functionality — editor uploads, optional), *Other user-generated content*
-  (ideas, comments), *Device or other IDs* (FCM token, app functionality).
+  (ideas, comments), *App activity — other in-app actions* (posts viewed/opened, dwell
+  time, “show me less”; app functionality + personalization, can be switched off in
+  Profile → Edit profile), *Device or other IDs* (FCM token, app functionality).
 - Not collected: location, contacts, calendar, health, financial info, browsing history,
   SMS, call logs.
 - Data is **encrypted in transit** → yes. **Users can request deletion** → yes, and

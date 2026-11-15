@@ -109,6 +109,7 @@ export default async function ProfilePage() {
                 idea={idea as Idea}
                 userAge={21}
                 isAuthenticated={true}
+                surface="profile"
               />
             ))}
           </>

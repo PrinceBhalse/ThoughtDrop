@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/components/ui/Toast";
+import { trackEvent } from "@/lib/events";
 
 interface FollowButtonProps {
   targetId: string;
@@ -49,6 +50,12 @@ export default function FollowButton({
       if (typeof data.followersCount === "number") {
         setFollowers(data.followersCount);
       }
+
+      trackEvent({
+        eventType: data.following ? "follow" : "unfollow",
+        surface: "profile",
+        metadata: { authorId: targetId },
+      });
 
       router.refresh();
     } catch (error) {

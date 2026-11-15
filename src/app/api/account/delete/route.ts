@@ -70,6 +70,9 @@ export async function POST(request: NextRequest) {
     admin.from("idea_reports").delete().eq("user_id", uid),
     admin.from("nda_signatures").delete().eq("user_id", uid),
     admin.from("workspace_messages").delete().eq("user_id", uid),
+    // Feed signals (migration 0015) — behavioural data must not outlive the account.
+    admin.from("feed_events").delete().eq("user_id", uid),
+    admin.from("session_intents").delete().eq("user_id", uid),
   ];
 
   for (const step of steps) {

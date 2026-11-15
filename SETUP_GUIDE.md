@@ -26,12 +26,12 @@ Please keep signed in, in one browser window:
 ### Choose one path:
 
 **Path A — keep the data (restore + upgrade in place):** click Restore, wait, then run
-`0002` → `0014` in order. `0000` and `0001` will report "already exists" — skip them.
+`0002` → `0015` in order. `0000` and `0001` will report "already exists" — skip them.
 Migration `0007` upgrades the legacy `comments` table (adds `author_id`, `parent_id`,
 `updated_at`, drops `user_id`, backfills both) — data is preserved.
 
 **Path B — start clean (no real data yet):** create a new project and run
-`0000` → `0014` in order. Everything is green from scratch — `0007` works on both
+`0000` → `0015` in order. Everything is green from scratch — `0007` works on both
 schemas.
 
 Both paths end at the same final database shape. If you have content in the old project
@@ -65,8 +65,8 @@ you care about, Path A is required; if it was only testing data, Path B is simpl
 
 1. Left sidebar → **SQL Editor** (terminal icon).
 2. Click **+ New query**.
-3. Open `D:\ThoughtDrop\supabase\migrations`. There are 15 files numbered `0000`–`0014`.
-4. For **each file, in numeric order** (Path B: all of `0000`→`0014`; Path A: skip
+3. Open `D:\ThoughtDrop\supabase\migrations`. There are 16 files numbered `0000`–`0015`.
+4. For **each file, in numeric order** (Path B: all of `0000`→`0015`; Path A: skip
    `0000` and `0001`):
    - Open it in Notepad → `Ctrl+A`, `Ctrl+C`
    - Back in the browser: paste into the SQL Editor

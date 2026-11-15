@@ -133,16 +133,17 @@ inside a 4-week phase.
 | Analytics | none | self-hosted Plausible + app event table |
 | Deploy discipline | bump versionCode every upload, tag releases, keep migrations additive & replayable (0007-style lessons) | CI builds the AAB in GitHub Actions |
 
-## 9. Migration sequence (continuing from 0014)
+## 9. Migration sequence (continuing from 0015)
 
 ```
-0015 profile media (avatars, display names, headers)
-0016 mentions + hashtags + interest topics
-0017 reactions, ripples (quote-share provenance)
-0018 drops (video + fact flags)
-0019 whispers (DM schema, RLS-first)
-0020 idea_views + creator stats
-0021 ripple score + monetization tables
+0015 feed signals + session intents + personalization consent   (shipped — Batch A)
+0016 profile media (avatars, display names, headers)
+0017 mentions + hashtags + interest topics (backfill)
+0018 reactions, ripples (quote-share provenance)
+0019 drops (video + fact flags)
+0020 whispers (DM schema, RLS-first)
+0021 idea_views + creator stats
+0022 ripple score + monetization tables
 ```
 
 Every migration: additive, `IF NOT EXISTS`, replayable; new RLS policies declared
@@ -258,17 +259,24 @@ GDPR both treat behavioural profiles as personal data.
 
 ### 11.7 Implementation batches (must-haves first)
 
-**Batch A — "See and learn" (1–2 weeks, no ML infra):**
+**Batch A — "See and learn" (1–2 weeks, no ML infra): SHIPPED Nov 2026**
 1. `0015_feed_signals.sql`: `feed_events` (user, idea, event type, dwell ms, surface,
    session_id, created_at), `session_intents` (user, session_id, intent, created_at),
    user `interest_topics` + `consent_personalization` columns. RLS: own-events
    insert/select, delete cascade on user delete.
-2. Instrument client surfaces: impression, click, dwell, like/save/share/skip,
-   follow/unfollow, plus intent selection. Fire-and-forget batching to one API route.
-3. Session-intent modal on first open per session → stored, passed into feed query.
-4. Feed response improvements: explicit ranking factors (graph, recency, quality),
-   70/30 exploration split, per-card reasons (`Because you follow …`, `Safe surprise`).
-5. "Show me less like this" action → negative event + immediate feed exclusion.
+2. ✅ Instrumented: impression, click, dwell, like/unlike, save/unsave, share,
+   follow/unfollow, "show me less", plus intent selection. Batched to `/api/events`
+   via `src/lib/events.ts`. `skip` is derived from short dwell rather than an
+   explicit event.
+3. ✅ Session-intent modal on first open per session → stored in `session_intents`
+   (`/api/intent`) and passed into the feed query.
+4. ✅ Feed response: follow graph, recency, quality, intent/category boost, interest
+   topics, 70/30 exploration split, per-card reasons (`Because you follow them`,
+   `Trending now`, `Outside your usual`).
+5. ✅ "Show me less like this" → negative event + immediate client-side exclusion +
+   14-day server-side suppression of the idea (and repeated authors).
+6. ✅ Consent + deletion: toggle in Profile → Edit profile; account deletion wipes
+   `feed_events` and `session_intents`; privacy policy + Play Data Safety updated.
 
 **Batch B — "Similarity" (2–3 weeks):**
 6. `0016_content_embeddings.sql` (pgvector) + backfill job for existing ideas;
@@ -281,7 +289,8 @@ GDPR both treat behavioural profiles as personal data.
 after A/B are measured. Ranking upgrades to Thompson sampling bandit once A provides
 a few weeks of events.
 
-**Measurement gate:** ship Batch A behind a config flag; compare D7 retention and
+**Measurement gate:** Batch A shipped without a flag (it is additive: consent-off and
+anonymous readers fall back to recency/popularity). Compare D7 retention and
 ideas-per-user before/after. If exploration hurts retention, tune the split, don't
 abandon transparency.
 

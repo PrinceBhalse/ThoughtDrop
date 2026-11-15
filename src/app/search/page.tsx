@@ -3,7 +3,7 @@
 import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { Loader2 } from "lucide-react";
+import { Loader2, Search, Sparkles } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -13,6 +13,7 @@ interface Idea {
   category: string;
   status: string;
   username?: string;
+  reason?: string;
 }
 
 interface Community {
@@ -23,133 +24,170 @@ interface Community {
 function SearchPlaceholder() {
   return (
     <div className="min-h-screen bg-background py-12 text-center">
-      <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2" /> Loading…
+      <Loader2 className="mx-auto mb-2 h-6 w-6 animate-spin" /> Loading…
     </div>
   );
 }
 
-function SearchContent() {
-  const [query, setQuery] = useState<string>("");
+function IdeaRow({ idea }: { idea: Idea }) {
+  return (
+    <Link
+      href={`/idea/${idea.id}`}
+      className="flex items-center gap-3 rounded-md px-4 py-2.5 transition-colors hover:bg-white/[0.05]"
+    >
+      <span className="rounded-md bg-white/5 p-1.5">
+        <Search className="h-3.5 w-3.5 text-primary" />
+      </span>
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-sm font-medium">{idea.title}</p>
+        <p className="text-xs text-muted-foreground">
+          {idea.category}
+          {idea.username ? ` · @${idea.username}` : ""}
+        </p>
+      </div>
+    </Link>
+  );
+}
+
+function SearchContent({ initialQuery }: { initialQuery: string }) {
+  const [query, setQuery] = useState(initialQuery);
+  const [ideas, setIdeas] = useState<Idea[]>([]);
+  const [communities, setCommunities] = useState<Community[]>([]);
   const [loading, setLoading] = useState(false);
-  const [ideas, setIdeas] = useState<Array<{ id: string; title: string; category: string; status: string; username?: string }>>([]);
-  const [communities, setCommunities] = useState<Array<{ id: string; name: string }>>([]);
+  const [searched, setSearched] = useState(false);
   const [surprise, setSurprise] = useState(false);
-  const searchParams = useSearchParams();
-  const currentQuery = searchParams.get("q") || "";
+  const [surpriseIdeas, setSurpriseIdeas] = useState<Idea[]>([]);
 
+  const trimmed = query.trim();
+
+  // Debounced search; all state updates happen inside the timer callback.
   useEffect(() => {
-    if (currentQuery && currentQuery.trim()) {
-      setQuery(currentQuery.trim());
-    }
-  }, [currentQuery]);
+    if (!trimmed) return;
+    let cancelled = false;
+    const timer = setTimeout(async () => {
+      setLoading(true);
+      try {
+        const res = await fetch(`/api/search?q=${encodeURIComponent(trimmed)}&limit=12`);
+        const data = await res.json();
+        if (cancelled) return;
+        setIdeas(data.ideas ?? []);
+        setCommunities(data.communities ?? []);
+        setSearched(true);
+      } catch {
+        if (!cancelled) {
+          setIdeas([]);
+          setCommunities([]);
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }, 250);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [trimmed]);
 
-  const loadResults = async (q: string) => {
-    if (!q.trim()) {
-      setIdeas([]);
-      setCommunities([]);
-      return;
-    }
-    setIdeas([]);
-    setCommunities([]);
-    setLoading(true);
-    try {
-      const res = await fetch(`/api/search?q=${encodeURIComponent(q)}&limit=12`);
-      const data = await res.json();
-      setIdeas(data.ideas ?? []);
-      setCommunities(data.communities ?? []);
-      setSurprise(true);
-    } catch {
-      setIdeas([]);
-      setCommunities([]);
-    } finally {
-      setLoading(false);
-    }
-  };
-
+  // "Surprise me" pulls the exploration slice of the For You feed.
   useEffect(() => {
-    if (!currentQuery?.trim()) {
-      loadResults("");
-    }
-  }, [currentQuery]);
+    if (!surprise) return;
+    let cancelled = false;
+    const load = async () => {
+      try {
+        const res = await fetch("/api/feed?sort=foryou&limit=24");
+        const data = await res.json();
+        if (cancelled) return;
+        const list = (data.ideas ?? []) as Idea[];
+        const outside = list.filter((idea) => idea.reason === "surprise");
+        setSurpriseIdeas(outside.length > 0 ? outside : list.slice(0, 9));
+      } catch {
+        if (!cancelled) setSurpriseIdeas([]);
+      }
+    };
+    void load();
+    return () => {
+      cancelled = true;
+    };
+  }, [surprise]);
 
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b border-border bg-background/90 backdrop-blur-sm">
-        <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
+        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3">
           <div className="flex items-center gap-3">
-            <svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-5 h-5 text-primary">
-              <circle cx="11" cy="11" r="8" />
-              <path d="m21 21-4.35-4.35" />
-            </svg>
+            <Search className="h-5 w-5 text-primary" />
             <h1 className="text-xl font-semibold">Discover</h1>
           </div>
-          {surprise ? (
-            <button onClick={() => setSurprise(false)} className="text-sm text-muted-foreground hover underline">
-              Close
-            </button>
-          ) : (
-            <button onClick={() => setSurprise(true)} className="text-sm text-muted-foreground hover underline">
-              Surprise me&rarr;
-            </button>
-          )}
+          <button
+            onClick={() => setSurprise((value) => !value)}
+            className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground hover:underline"
+            aria-pressed={surprise}
+          >
+            <Sparkles className="h-4 w-4" />
+            {surprise ? "Hide surprises" : "Surprise me"}
+          </button>
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto p-4">
-        <section className="mb-6 rounded-xl border border-border p-4 glass-panel">
+      <main className="mx-auto max-w-7xl p-4">
+        <section className="glass-panel mb-6 rounded-xl border border-border p-4">
           <div className="relative">
             <input
               type="text"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              onFocus={() => setSurprise(false)}
-              placeholder="Search ideas, topics, or creators..."
-              className="w-full bg-white/5 border border-white/10 rounded-full py-2 pl-10 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all placeholder:text-muted-foreground"
+              placeholder="Search ideas, topics, or creators…"
+              className="w-full rounded-full border border-white/10 bg-white/5 py-2 pl-10 pr-4 text-sm transition-all placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
               autoFocus
             />
-            <svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground">
-              <circle cx="11" cy="11" r="8" />
-              <path d="m21 21-4.35-4.35" />
-            </svg>
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           </div>
         </section>
+
+        {surprise && (
+          <section className="glass-panel mb-6 rounded-xl border border-border p-5">
+            <h2 className="mb-1 flex items-center gap-2 text-sm font-medium uppercase tracking-wider text-muted-foreground">
+              <Sparkles className="h-4 w-4 text-primary" /> Outside your usual
+            </h2>
+            <p className="mb-3 text-xs text-muted-foreground">
+              Controlled serendipity — ideas from adjacent interest clusters and rising creators,
+              not just more of what you already read.
+            </p>
+            {surpriseIdeas.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Nothing surprising yet — check back soon.</p>
+            ) : (
+              <div className="space-y-1">
+                {surpriseIdeas.map((idea) => (
+                  <IdeaRow key={`s-${idea.id}`} idea={idea} />
+                ))}
+              </div>
+            )}
+          </section>
+        )}
 
         <section>
           {loading ? (
             <div className="py-12 text-center">
-              <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2" /> Loading…
+              <Loader2 className="mx-auto mb-2 h-6 w-6 animate-spin" /> Loading…
             </div>
-          ) : !query.trim() ? (
+          ) : !trimmed ? (
             <div className="py-12 text-center text-muted-foreground">
-              Type above to search ideas & communities
+              Type above to search ideas &amp; communities
             </div>
           ) : ideas.length === 0 && communities.length === 0 ? (
             <div className="py-12 text-center text-muted-foreground">
-              No results for &ldquo;{query}&rdquo;
+              {searched ? <>No results for &ldquo;{trimmed}&rdquo;</> : "Searching…"}
             </div>
           ) : (
-            <div className="grid gap-4">
+            <div className="grid gap-6">
               {ideas.length > 0 && (
                 <div>
-                  <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Related Ideas</h2>
-                  <div className="space-y-2 max-h-48 overflow-y-auto">
+                  <h2 className="mb-2 text-sm font-medium uppercase tracking-wider text-muted-foreground">
+                    Related Ideas
+                  </h2>
+                  <div className="space-y-1">
                     {ideas.map((idea) => (
-                      <Link
-                        key={idea.id}
-                        href={`/idea/${idea.id}`}
-                        className="flex items-center gap-3 px-4 py-2.5 rounded-md hover:bg-white/[0.05] transition-colors"
-                      >
-                        <span className="p-1.5 rounded-md bg-white/5">
-                          {idea.category === "Tech" && <svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-3.5 h-3.5 text-primary"><path d="M13 10V3L4 14h7v7l9-11" /></svg>}
-                          {idea.category === "Creative" && <svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-3.5 h-3.5 text-primary"><circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" /></svg>}
-                          {idea.category === "Social Impact" && <svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-3.5 h-3.5 text-primary"><path d="M21 21V5a2 2 0 00-2-2H5a2 2 0 00-2 2v16l5-5z" /></svg>}
-                          {idea.category !== "Tech" && idea.category !== "Creative" && idea.category !== "Social Impact" && <svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-3.5 h-3.5 text-primary"><circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" /></svg>}
-                        </span>
-                        <div className="min-w-0 flex-1">
-                          <p className="text-sm font-medium truncate">{idea.title}</p>
-                          {idea.username && <p className="text-xs text-muted-foreground">by @{idea.username}</p>}
-                        </div>
-                      </Link>
+                      <IdeaRow key={idea.id} idea={idea} />
                     ))}
                   </div>
                 </div>
@@ -157,41 +195,26 @@ function SearchContent() {
 
               {communities.length > 0 && (
                 <div>
-                  <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Communities</h2>
-                  <div className="space-y-2 max-h-48 overflow-y-auto">
-                    {communities.map((c) => (
+                  <h2 className="mb-2 text-sm font-medium uppercase tracking-wider text-muted-foreground">
+                    Communities
+                  </h2>
+                  <div className="space-y-1">
+                    {communities.map((community) => (
                       <Link
-                        key={`c-${c.id}`}
-                        href={`/d/${c.name}`}
-                        className="flex items-center gap-3 px-4 py-2.5 rounded-md hover:bg-white/[0.05] transition-colors"
+                        key={`c-${community.id}`}
+                        href={`/d/${community.name}`}
+                        className="flex items-center gap-3 rounded-md px-4 py-2.5 transition-colors hover:bg-white/[0.05]"
                       >
-                        <span className="p-1.5 rounded-md bg-white/5">
-                          <svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-3.5 h-3.5 text-primary"><circle cx="12" cy="12" r="10" /><path d="M12 2v20M20 12H4" /></svg>
+                        <span className="rounded-md bg-white/5 p-1.5">
+                          <Search className="h-3.5 w-3.5 text-primary" />
                         </span>
                         <div className="min-w-0 flex-1">
-                          <p className="text-sm font-medium truncate">{c.name}</p>
+                          <p className="truncate text-sm font-medium">{community.name}</p>
                           <p className="text-xs text-muted-foreground">Community</p>
                         </div>
                       </Link>
                     ))}
                   </div>
-                </div>
-              )}
-
-              {surprise && (
-                <div className="mt-6 glass-panel p-5 rounded-xl border border-border">
-                  <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wider mb-3">
-                    Surprise me
-                    <svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="inline-block align-middle">
-                      <path d="M12 5v14M5 12h14" />
-                    </svg>
-                  </h2>
-                  <p className="text-xs text-muted-foreground mb-3">
-                    Controlled serendipity -- content from adjacent interest clusters and rising creators
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    We mix what you're searching for with fresh perspectives from adjacent communities and rising creators.
-                  </p>
                 </div>
               )}
             </div>
@@ -202,10 +225,18 @@ function SearchContent() {
   );
 }
 
+/** `useSearchParams` needs a Suspense boundary during prerender (Next 16). */
+function SearchRoute() {
+  const searchParams = useSearchParams();
+  const query = searchParams.get("q") ?? "";
+  // Remount on navigation so the input follows `?q=`.
+  return <SearchContent key={query} initialQuery={query} />;
+}
+
 export default function SearchDiscoveryPage() {
   return (
     <Suspense fallback={<SearchPlaceholder />}>
-      <SearchContent />
+      <SearchRoute />
     </Suspense>
   );
 }
