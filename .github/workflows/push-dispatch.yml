@@ -27,7 +27,7 @@ jobs:
             echo "CRON_SECRET is not set; skipping."
             exit 0
           fi
-          BASE="${SITE_URL:-https://thoughtdrop.app}"
+          BASE="${SITE_URL:-https://thought-drop-eight.vercel.app}"
           curl --fail --silent --show-error --max-time 30 \
             -H "Authorization: Bearer ${CRON_SECRET}" \
             "${BASE%/}/api/push/dispatch"

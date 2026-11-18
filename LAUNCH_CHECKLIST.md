@@ -93,8 +93,8 @@ terms_accepted_at recorded at signup.
    npm run check:deploy -- https://thoughtdrop.app
    ```
 
-   Must end with `All checks passed`. The run covers 10 HTTP routes plus 2 schema
-   checks (`feed_events`, `session_intents`). If a schema check fails, apply
+   Must end with `All checks passed`. The run covers 10 HTTP routes plus 12 schema
+   checks (core tables + `feed_events` / `session_intents`). If a schema check fails, apply
    `supabase/migrations/0015_feed_signals.sql` before continuing. If any other
    check fails, fix that one first.
 
@@ -144,6 +144,9 @@ Push is what makes Play's "repackaged website" rejection impossible.
    (git-ignored).
 2. Project Settings → Service accounts → **Generate new private key**. Add that JSON (or a
    base64 of it) as `FIREBASE_SERVICE_ACCOUNT` in Vercel, and set `CRON_SECRET`.
+   `SUPABASE_SERVICE_ROLE_KEY` must also be set — the dispatcher runs without a user
+   session, so it reads notifications with the service-role client (RLS would otherwise
+   hide every row and push would silently do nothing).
 3. Rebuild: `npm run android:aab` — Firebase Messaging gets picked up automatically once
    the file exists.
 4. `.github/workflows/push-dispatch.yml` is already committed: set repo **Settings →

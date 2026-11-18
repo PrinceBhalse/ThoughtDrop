@@ -188,7 +188,7 @@ npm run android:sync
 npm run android:aab
 ```
 
-All checks must say **PASS** — 10 HTTP routes plus 2 schema checks
+All checks must say **PASS** — 10 HTTP routes plus 12 schema checks
 (`feed_events`, `session_intents`). A schema failure means
 `supabase/migrations/0015_feed_signals.sql` has not been applied yet; paste it
 into the Supabase SQL Editor and re-run. If any other check fails, paste me the
@@ -244,6 +244,8 @@ On the phone:
 4. Vercel → **Settings → Environment Variables**, add:
    - `FIREBASE_SERVICE_ACCOUNT` = the whole JSON
    - `CRON_SECRET` = any long random string
+   - `SUPABASE_SERVICE_ROLE_KEY` = service_role key (Supabase → Project Settings → API).
+     The dispatcher has no user session, so it must bypass RLS to see pending rows.
 5. Vercel → **Deployments → ⋯ → Redeploy** so the new values take effect.
 6. GitHub → your repo → **Settings → Secrets and variables → Actions → New repository
    secret**: name `CRON_SECRET`, value = the same random string. (This keeps the push

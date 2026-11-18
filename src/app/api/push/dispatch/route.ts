@@ -1,5 +1,5 @@
-import { createClient } from '@/utils/supabase/server';
 import { NextResponse, type NextRequest } from "next/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { dispatchPendingPushes } from "@/lib/push-dispatch";
 
 export const dynamic = "force-dynamic";
@@ -7,11 +7,13 @@ export const dynamic = "force-dynamic";
 /**
  * Cron endpoint that pushes notifications to devices whose app is closed.
  *
- * Vercel cron (vercel.json):
- *   { "crons": [{ "path": "/api/push/dispatch", "schedule": "every 5 minutes" }] }
- *
- * Requires CRON_SECRET to be set; Vercel sends it as
+ * Triggered by `.github/workflows/push-dispatch.yml` (every 10 minutes) or a
+ * Vercel cron. Requires CRON_SECRET; the caller sends
  * `Authorization: Bearer $CRON_SECRET`.
+ *
+ * This runs with the service-role client on purpose: a cron request carries no
+ * user session, so the cookie-scoped client would see zero rows under RLS and
+ * silently deliver nothing.
  */
 export async function GET(request: NextRequest) {
   const secret = process.env.CRON_SECRET;
@@ -25,7 +27,15 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const supabase = await createClient();
+  let supabase;
+  try {
+    supabase = createAdminClient();
+  } catch {
+    return NextResponse.json(
+      { error: "SUPABASE_SERVICE_ROLE_KEY is not configured" },
+      { status: 500 }
+    );
+  }
 
   const { data: pending } = await supabase
     .from("notifications")

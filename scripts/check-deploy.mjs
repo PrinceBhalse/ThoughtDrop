@@ -92,6 +92,16 @@ const supabaseUrl = (env.NEXT_PUBLIC_SUPABASE_URL || "").replace(/\/$/, "");
 const supabaseKey = env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
 
 const tables = [
+  { table: "users", migration: "0000_initial_schema.sql" },
+  { table: "ideas", migration: "0000_initial_schema.sql" },
+  { table: "communities", migration: "0002_phase2_collaboration.sql" },
+  { table: "upvotes", migration: "0005_upvotes_search_crud.sql" },
+  { table: "bookmarks", migration: "0008_bookmarks.sql" },
+  { table: "follows", migration: "0009_follows.sql" },
+  { table: "notifications", migration: "0010_notifications.sql" },
+  { table: "push_tokens", migration: "0011_push_tokens.sql" },
+  { table: "user_blocks", migration: "0014_user_safety.sql" },
+  { table: "idea_reports", migration: "0003_phase3_admin_moderation.sql" },
   { table: "feed_events", migration: "0015_feed_signals.sql" },
   { table: "session_intents", migration: "0015_feed_signals.sql" },
 ];
